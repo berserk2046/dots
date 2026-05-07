@@ -1,0 +1,25 @@
+#!/bin/sh
+
+sxhkd &
+polybar hdmi &
+polybar top &
+xrandr --output HDMI-1 --right-of eDP-1
+xsetroot -cursor_name left_ptr
+~/.config/.fehbg
+
+ 
+# Monitor #
+bspc monitor eDP-1 -d 1 2 3 4
+bspc monitor HDMI-1 -d 1 2 3 4
+
+
+# config
+bspc config border_width 1
+bspc config window_gap 5
+bspc config split_ratio 0.5
+
+# colors
+bspc config normal_border_color "#222222"
+bspc config acitve_border_color "#222222"
+bspc config focused_border_color "#b2beb5"
+bspc config urgent_border_color "#fb0f0f"
