@@ -1,0 +1,124 @@
+{
+    "bar_id": "bar-0",
+    "ipc": true,
+    "position": "top",
+    "modules-left": ["sway/workspaces", "sway/mode"],
+    "modules-center": ["custom/date" ],
+    "modules-right": ["mpd", "pulseaudio", "network", "cpu", "memory", "backlight", "battery", "tray", "custom/power"],
+    "sway/mode": {
+        "format": "<span style=\"italic\">{}</span>"
+    },
+    "sway/window": {
+       "format": "{}",
+       "on-click-middle": "sway kill",
+       "on-click": "sway floating toggle",
+       "on-click-right": "sway move scratchpad",
+       "on-scroll-up":"sway focus prev",
+       "on-scroll-down":"sway focus next",
+       "tooltip": false
+    },
+
+    "tray": {
+        // "icon-size": 21,
+        "spacing": 10
+    },
+    "cpu": {
+        "format": "{usage}%  ",
+        "tooltip": false
+    },
+    "memory": {
+        "format": "{used:0.1f}G  ",
+        "tooltip": false
+
+    },
+    "backlight": {
+        // "device": "acpi_video1",
+        "format": "{percent}% {icon}",
+        "format-icons": ["", "", "", "", "", "", "", "", ""],
+        "on-scroll-up":"sudo brightnessctl s +5%",
+        "on-scroll-down":"sudo brightnessctl s 5%-"
+    },
+    "battery": {
+        "states": {
+            "good": 82,
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{capacity}% {icon}",
+        "format-charging": "{capacity}% ",
+        "format-plugged": "{capacity}% ",
+        "format-alt": "{time} {icon}",
+        "format-good": "{capacity}% {icon}",
+        // "format-full": "",
+        "format-icons": ["b", "b", "b", "b", "b"]
+    },
+    "network": {
+        "interface": "wlan0",
+        "format": "{ifname}",
+        "format-wifi": " ",
+        "format-ethernet": " ",
+        "format-disconnected": "",
+        "tooltip-format": "{ifname}",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
+        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}  ",
+        "tooltip-format-disconnected": "Disconnected",
+    },
+    "pulseaudio": {
+        // "scroll-step": 1, // %, can be a float
+        "format": "{volume}% {icon} {format_source}",
+        "format-bluetooth": "{volume}% {icon} {format_source}",
+        "format-bluetooth-muted": " {icon} {format_source}",
+        "format-muted": " {format_source}",
+        "format-source": "{volume}% ",
+        "format-source-muted": " ",
+        "format-icons": {
+            "default": [" ", " ", "  "]
+        },
+    },
+    "custom/date": {
+            "format": "{}",
+            "interval": 60,
+            "exec": "date +'%Y-%m-%d %A %l:%M %p'",
+            "on-click": "foot -a=calendar sh -c calcurse",
+            "on-click-middle": "pkill calcurse",
+            "on-click-right": "dash .local/bin/cal.sh",
+            "tooltip": false
+        },
+    "custom/power": {
+            "format": " ",
+            "on-click": "sh ~/void/pog/scripts/poweroff",
+            "tooltip": false
+        },
+    "mpd": {
+        "format": "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{title} ({elapsedTime:%M:%S}/{totalTime:%M:%S})",
+        "format-disconnected": "Disconnected ",
+        "format-stopped": "",
+        "unknown-tag": "N/A",
+        "interval": 2,
+        "consume-icons": {
+            "on": " "
+        },
+        "random-icons": {
+            "on": " "
+        },
+        "repeat-icons": {
+            "on": " "
+        },
+        "single-icons": {
+            "on": "1 "
+        },
+        "state-icons": {
+            "paused": "",
+            "playing": ""
+        },
+        "on-click": "mpc toggle",
+        "on-click-right": "mpc repeat",
+        "on-click-middle": "mpc stop",
+        "on-scroll-up":"mpc next",
+        "on-scroll-down":"mpc prev",
+        "tooltip-format": "MPD (connected), {artist} - {album} - {title} ⸨{songPosition}/{queueLength}⸩",
+        "tooltip-format-disconnected": "MPD (disconnected)",
+    },
+
+
+}
