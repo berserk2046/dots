@@ -1,0 +1,11 @@
+#!/bin/sh
+
+CHOICE=$(printf '%s\n' "Shutdown" "Reboot" "Suspend" "Lock" "Logout"| fuzzel -d -p "Session Menu:")
+
+case "$CHOICE" in
+	"Shutdown") sudo shutdown -P now ;;
+	"Reboot") sudo shutdown -r now ;;
+	"Suspend") sudo zzz && swaylock -f ;;
+	"Lock") swaylock -f ;;
+	"Logout") loginctl terminate-user $USER ;;
+esac
