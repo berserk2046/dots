@@ -36,8 +36,10 @@ The login screen is optional: `sudo sh lockscreen/greetd/install.sh [wallpaper]`
 - Packages (official repos): `hyprland quickshell waybar hyprpaper hypridle hyprsunset foot fuzzel yazi
   grim playerctl brightnessctl pipewire wireplumber libpulse power-profiles-daemon upower mpd mpc
   wpa_supplicant bluez bluez-utils python python-gobject python-dbus glib2 libnotify xdg-utils
-  ttf-firacode-nerd`
-- AUR: `pwvucontrol`, `apple-fonts` (SF Pro and SF Pro Rounded)
+  ttf-firacode-nerd curl 7zip fontconfig`
+- AUR: `pwvucontrol`
+- SF Pro and SF Pro Rounded: `install.sh` downloads them from Apple into `~/.local/share/fonts/SF-Pro`
+  (the AUR's `apple-fonts` fails whenever Apple updates the download)
 - Themes: [MacTahoe GTK](https://github.com/vinceliuice/MacTahoe-gtk-theme) and
   [MacTahoe icons and cursors](https://github.com/vinceliuice/MacTahoe-icon-theme)
 - Optional: the `hyprbars` plugin for title bars
