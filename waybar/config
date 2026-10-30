@@ -1,20 +1,21 @@
 {
-    "bar_id": "bar-0",
-    "ipc": true,
     "position": "top",
-    "modules-left": ["sway/workspaces", "sway/mode"],
+	"height": 22,
+	"margin-left": 100,
+	"margin-right": 100,
+    "modules-left": ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["custom/date" ],
-    "modules-right": ["mpd", "pulseaudio", "network", "cpu", "memory", "backlight", "battery", "tray", "custom/power"],
-    "sway/mode": {
+    "modules-right": ["custom/profile", "custom/spotify", "mpd", "pulseaudio", "network", "custom/system", "backlight", "battery", "tray", "custom/notifications", "custom/power"],
+    "hyprland/submap": {
         "format": "<span style=\"italic\">{}</span>"
     },
-    "sway/window": {
+    "hyprland/window": {
        "format": "{}",
-       "on-click-middle": "sway kill",
-       "on-click": "sway floating toggle",
-       "on-click-right": "sway move scratchpad",
-       "on-scroll-up":"sway focus prev",
-       "on-scroll-down":"sway focus next",
+       "on-click-middle": "hyprctl dispatch 'hl.dsp.window.close()'",
+       "on-click": "hyprctl dispatch 'hl.dsp.window.float()'",
+       "on-click-right": "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:scratchpad\", follow = false })'",
+       "on-scroll-up": "hyprctl dispatch 'hl.dsp.window.cycle_next({ next = false })'",
+       "on-scroll-down": "hyprctl dispatch 'hl.dsp.window.cycle_next()'",
        "tooltip": false
     },
 
@@ -22,14 +23,12 @@
         // "icon-size": 21,
         "spacing": 10
     },
-    "cpu": {
-        "format": "{usage}%  ",
+    // CPU and RAM in one module; click for the System panel (CPU graph, memory, storage, processes).
+    "custom/system": {
+        "exec": "~/.config/waybar-widgets/waybar-system.sh",
+        "return-type": "json",
+        "on-click": "~/.config/waybar-widgets/toggle.sh system",
         "tooltip": false
-    },
-    "memory": {
-        "format": "{used:0.1f}G  ",
-        "tooltip": false
-
     },
     "backlight": {
         // "device": "acpi_video1",
@@ -47,13 +46,14 @@
         "format": "{capacity}% {icon}",
         "format-charging": "{capacity}% ",
         "format-plugged": "{capacity}% ",
-        "format-alt": "{time} {icon}",
         "format-good": "{capacity}% {icon}",
         // "format-full": "",
-        "format-icons": ["b", "b", "b", "b", "b"]
+        "format-icons": ["b", "b", "b", "b", "b"],
+        "on-click": "~/.config/waybar-widgets/toggle.sh battery",
+        "tooltip": false
     },
     "network": {
-        "interface": "wlan0",
+        // No fixed "interface": waybar follows the default route, so Ethernet shows when plugged in.
         "format": "{ifname}",
         "format-wifi": " ",
         "format-ethernet": " ",
@@ -62,33 +62,63 @@
         "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
         "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}  ",
         "tooltip-format-disconnected": "Disconnected",
+        "tooltip": false, // the panel shows this, and the tooltip would cover it
+		"on-click": "~/.config/waybar-widgets/toggle.sh wifi",
+		"on-click-right": "foot wpa_cli"
     },
     "pulseaudio": {
         // "scroll-step": 1, // %, can be a float
         "format": "{volume}% {icon} {format_source}",
         "format-bluetooth": "{volume}% {icon} {format_source}",
-        "format-bluetooth-muted": " {icon} {format_source}",
-        "format-muted": " {format_source}",
+        "format-bluetooth-muted": "󰗾 {icon} {format_source}",
+        "format-muted": "󰎊 {format_source}",
         "format-source": "{volume}% ",
         "format-source-muted": " ",
         "format-icons": {
             "default": [" ", " ", "  "]
-        },
-    },
+		},
+		"on-click": "~/.config/waybar-widgets/toggle.sh volume",
+		"on-click-right": "pwvucontrol",
+		"tooltip": false
+	},
     "custom/date": {
             "format": "{}",
             "interval": 60,
             "exec": "date +'%Y-%m-%d %A %l:%M %p'",
-            "on-click": "foot -a=calendar sh -c calcurse",
-            "on-click-middle": "pkill calcurse",
-            "on-click-right": "dash .local/bin/cal.sh",
+            "on-click": "~/.config/waybar-widgets/toggle.sh date",
             "tooltip": false
+        },
+    // Bell with the unread count (moon during Do Not Disturb), written by the lock screen shell.
+    // Click: Notification Center, right click: Do Not Disturb.
+    "custom/notifications": {
+            "exec": "cat \"$XDG_RUNTIME_DIR/lockscreen/notifications.json\" 2>/dev/null",
+            "return-type": "json",
+            "interval": "once",
+            "signal": 9,
+            "on-click": "qs -p ~/.config/lockscreen ipc call notifications toggle",
+            "on-click-right": "qs -p ~/.config/lockscreen ipc call notifications toggleDnd"
         },
     "custom/power": {
             "format": " ",
-            "on-click": "sh ~/void/pog/scripts/poweroff",
+            "on-click": "~/.config/waybar-widgets/toggle.sh power",
+            "on-click-right": "~/.config/waybar/session-menu.sh",
             "tooltip": false
         },
+	"custom/profile": {
+		"format": "{}",
+		"interval": 2,
+		"exec": "cat /sys/firmware/acpi/platform_profile",
+		"tooltip": false
+		},
+	"custom/spotify": {
+		"exec": "~/.config/waybar/mediaplayer.py --player spotify",
+		"format": "{}  ",
+		"return-type": "json",
+		"on-click": "playerctl play-pause",
+		"on-scroll-up": "playerctl next",
+		"on-scroll-down": "playerctl previous"
+	},
+
     "mpd": {
         "format": "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{title} ({elapsedTime:%M:%S}/{totalTime:%M:%S})",
         "format-disconnected": "Disconnected ",
@@ -117,7 +147,7 @@
         "on-scroll-up":"mpc next",
         "on-scroll-down":"mpc prev",
         "tooltip-format": "MPD (connected), {artist} - {album} - {title} ⸨{songPosition}/{queueLength}⸩",
-        "tooltip-format-disconnected": "MPD (disconnected)",
+        "tooltip-format-disconnected": "MPD (disconnected)"
     },
 
 

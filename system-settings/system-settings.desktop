@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=System Settings
+Comment=Settings for Hyprland, the Dock, the menu bar and the lock screen
+Exec=sh -c "qs -p ~/.config/system-settings ipc call settings show 2>/dev/null || qs -p ~/.config/system-settings -n -d"
+Icon=preferences-system
+Categories=Settings;
+StartupWMClass=system-settings
