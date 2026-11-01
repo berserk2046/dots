@@ -52,7 +52,7 @@ Column {
                     text: qsTr("Edit")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
 
@@ -78,7 +78,7 @@ Column {
             text: pane.fullName || Quickshell.env("USER")
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 18
+            font.pixelSize: Theme.fontSize(18)
             font.weight: Font.DemiBold
         }
     }
@@ -114,7 +114,7 @@ Column {
                 text: Quickshell.env("USER")
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
 
@@ -126,7 +126,7 @@ Column {
                 text: Store.home
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
 
@@ -138,7 +138,7 @@ Column {
                 text: pane.shell
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
     }

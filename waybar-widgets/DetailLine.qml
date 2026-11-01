@@ -15,7 +15,7 @@ Item {
         text: parent.label
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     Text {
@@ -27,6 +27,6 @@ Item {
         text: parent.value
         color: Theme.text
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 }

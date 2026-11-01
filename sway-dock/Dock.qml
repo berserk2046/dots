@@ -435,7 +435,7 @@ PanelWindow {
         x: 6
         width: parent.width - 12
         height: 1
-        color: "#26ffffff"
+        color: DockTheme.border
     }
 
     component MenuEntry: Rectangle {
@@ -445,20 +445,20 @@ PanelWindow {
         property bool checkable: false // window entries: leave room for the checkmark
         property bool checked: false
         property bool closesMenu: true
-        property color textColor: "#ffffff"
+        property color textColor: DockTheme.text
         signal triggered
 
         width: parent.width
         height: 30
         radius: 7
-        color: entryMouse.containsMouse ? "#33ffffff" : "transparent"
+        color: entryMouse.containsMouse ? DockTheme.hover : "transparent"
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: 9
             text: "✓"
-            color: "#ffffff"
+            color: DockTheme.text
             font.family: "SF Pro"
             font.pixelSize: 13
             visible: entry.checked
@@ -598,9 +598,9 @@ PanelWindow {
             width: dock.vertical ? dock.barHeight : row.width + dock.sidePadding * 2
             height: dock.vertical ? row.height + dock.sidePadding * 2 : dock.barHeight
             radius: 22
-            color: "#e612121a"
+            color: DockTheme.bar
             border.width: 1
-            border.color: "#26ffffff"
+            border.color: DockTheme.border
         }
 
         // Icons line up on the screen edge side, so magnified ones grow inward.
@@ -669,7 +669,7 @@ PanelWindow {
                     anchors.centerIn: parent
                     width: dock.vertical ? dock.iconSize * 0.8 : 1
                     height: dock.vertical ? 1 : dock.iconSize * 0.8
-                    color: "#33ffffff"
+                    color: DockTheme.hover
                 }
             }
 
@@ -705,9 +705,9 @@ PanelWindow {
             x: dock.popupPosition(target, width, height).x
             y: dock.popupPosition(target, width, height).y
             radius: 12
-            color: "#f012121a"
+            color: DockTheme.menu
             border.width: 1
-            border.color: "#26ffffff"
+            border.color: DockTheme.border
 
             HoverHandler {
                 id: previewHover
@@ -732,7 +732,7 @@ PanelWindow {
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
                     text: preview.target?.entry?.name || preview.target?.app.id || ""
-                    color: "#99ffffff"
+                    color: DockTheme.textDim
                     font.family: "SF Pro"
                     font.pixelSize: 12
                     font.bold: true
@@ -786,9 +786,9 @@ PanelWindow {
             x: dock.popupPosition(target, width, height).x
             y: dock.popupPosition(target, width, height).y
             radius: 12
-            color: "#f012121a"
+            color: DockTheme.menu
             border.width: 1
-            border.color: "#26ffffff"
+            border.color: DockTheme.border
 
             // Clicks on the menu's padding and separators don't dismiss it.
             MouseArea {
@@ -854,7 +854,7 @@ PanelWindow {
                     enabled: trashItem.full
                     opacity: enabled ? 1 : 0.4
                     closesMenu: menu.confirmEmpty
-                    textColor: menu.confirmEmpty ? "#ff6961" : "#ffffff"
+                    textColor: menu.confirmEmpty ? DockTheme.danger : DockTheme.text
                     text: menu.confirmEmpty ? qsTr("Click again to erase %n item(s)", "", trashItem.itemCount)
                                             : qsTr("Empty Trash")
                     onTriggered: {
@@ -933,7 +933,7 @@ PanelWindow {
             width: removeLabel.implicitWidth + 16
             height: removeLabel.implicitHeight + 8
             radius: 6
-            color: "#f012121a"
+            color: DockTheme.menu
             visible: dock.dragRemoving
 
             Text {
@@ -941,7 +941,7 @@ PanelWindow {
 
                 anchors.centerIn: parent
                 text: qsTr("Remove")
-                color: "#ffffff"
+                color: DockTheme.text
                 font.family: "SF Pro"
                 font.pixelSize: 12
             }

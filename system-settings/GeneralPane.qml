@@ -130,7 +130,7 @@ Column {
                     text: about.info.model ?? ""
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 20
+                    font.pixelSize: Theme.fontSize(20)
                     font.weight: Font.DemiBold
                 }
 
@@ -140,7 +140,7 @@ Column {
                     text: about.info.vendor ?? ""
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fontSize(12)
                 }
             }
 
@@ -169,7 +169,7 @@ Column {
                         text: about.info.cpu ?? ""
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
                 }
 
@@ -187,7 +187,7 @@ Column {
                             text: modelData
                             color: Theme.textSecondary
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.fontSize(12)
                         }
                     }
                 }
@@ -199,7 +199,7 @@ Column {
                         text: about.info.memory ?? ""
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
                 }
 
@@ -217,7 +217,7 @@ Column {
                             text: modelData
                             color: Theme.textSecondary
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.fontSize(12)
                         }
                     }
                 }
@@ -242,7 +242,7 @@ Column {
                             text: about.info[infoRow.modelData[1]] ?? ""
                             color: Theme.textSecondary
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.fontSize(12)
                         }
                     }
                 }
@@ -254,7 +254,7 @@ Column {
                         text: about.uptime(about.info.uptime)
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
                 }
             }
@@ -420,7 +420,7 @@ Column {
                         text: dateTime.now.toLocaleString(Qt.locale(), "dddd, MMMM d, yyyy  h:mm:ss AP")
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
                 }
 
@@ -510,7 +510,7 @@ Column {
                     text: qsTr("Add Calendar")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fontSize(15)
                     font.weight: Font.DemiBold
                 }
 
@@ -675,7 +675,7 @@ Column {
                     text: qsTr("Add Login Item")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fontSize(15)
                     font.weight: Font.DemiBold
                 }
 

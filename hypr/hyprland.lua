@@ -96,6 +96,8 @@ end)
 ---- ENVIRONMENT VARIABLES ----
 -------------------------------
 
+-- Qt apps follow the GTK theme and light/dark (System Settings → Appearance)
+hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
 hl.env("XCURSOR_SIZE", tostring(pick(S.cursor_size, 24)))
 hl.env("HYPRCURSOR_SIZE", tostring(pick(S.cursor_size, 24)))
 if S.cursor_theme then
@@ -142,8 +144,9 @@ hl.config({
 
         blur = {
             enabled  = true,
-            size     = 3,
-            passes   = 1,
+            -- Strong enough to read as frosted glass behind see-through surfaces (System Settings' sidebar)
+            size     = 8,
+            passes   = 3,
             vibrancy = 0.1696,
         },
     },
@@ -431,6 +434,25 @@ hl.window_rule({
 })
 
 
+-- The menu bar is translucent, like macOS's: blur what's behind it
+hl.layer_rule({
+    name  = "waybar-blur",
+    match = { namespace = "^waybar$" },
+
+    blur = true,
+})
+
+-- So is the Dock (light frosted glass in Light mode). Its surface is larger than the bar it draws,
+-- so only its visible parts are blurred.
+hl.layer_rule({
+    name  = "dock-blur",
+    match = { namespace = "^sway-dock$" },
+
+    blur         = true,
+    ignore_alpha = 0.3,
+})
+
+
 ------------------------------
 ---- TITLE BARS (hyprbars) ----
 ------------------------------
@@ -440,12 +462,25 @@ hl.window_rule({
 --   hyprpm enable hyprbars
 -- Hyprland reloads this config after the plugin loads, so this block applies then.
 if hl.plugin.hyprbars ~= nil then
+    -- Light or dark like apps, following System Settings → Appearance (its appearance.sh writes the
+    -- choice to GTK's settings.ini and reloads this config when it switches)
+    local light = false
+    local ini = io.open(os.getenv("HOME") .. "/.config/gtk-3.0/settings.ini")
+    if ini then
+        light = ini:read("a"):match("gtk%-application%-prefer%-dark%-theme%s*=%s*0") ~= nil
+        ini:close()
+    end
+    local bar         = light and "rgb(e8e8e8)" or ab
+    local barText     = light and "rgb(262626)" or ta
+    local barUnfocused     = light and "rgb(f6f6f6)" or bg
+    local barTextUnfocused = light and "rgb(a6a6a6)" or uf
+
     hl.config({
         plugin = {
             hyprbars = {
                 bar_height                 = 28,
-                bar_color                  = ab,
-                col                        = { text = ta },
+                bar_color                  = bar,
+                col                        = { text = barText },
                 bar_text_font              = "SF Pro Text",
                 bar_text_size              = 10,
                 bar_text_weight            = "medium",
@@ -456,7 +491,7 @@ if hl.plugin.hyprbars ~= nil then
                 bar_part_of_window         = true,
                 bar_precedence_over_border = true,
                 icon_on_hover              = true,
-                inactive_button_color      = "rgb(8a8a8a)",
+                inactive_button_color      = light and "rgb(cdcdcd)" or "rgb(8a8a8a)",
                 on_double_click            = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })']],
             },
         },
@@ -490,8 +525,8 @@ if hl.plugin.hyprbars ~= nil then
         name  = "hyprbars-unfocused",
         match = { focus = false },
 
-        ["hyprbars:bar_color"]   = bg,
-        ["hyprbars:title_color"] = uf,
+        ["hyprbars:bar_color"]   = barUnfocused,
+        ["hyprbars:title_color"] = barTextUnfocused,
     })
 
     -- Apps that draw their own title bar (client-side decorations) get no hyprbar.

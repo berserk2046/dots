@@ -1,7 +1,7 @@
 #!/bin/sh
-# waybar custom/system module: CPU usage and used RAM in one label, refreshed every 2 seconds.
-cpu_glyph=$(printf '\357\213\233') # nf-fa-microchip, as waybar's cpu module used
-mem_glyph=$(printf '\357\203\211') # nf-fa-bars, as the memory module used
+# waybar custom/system module: a chip icon (the numbers are in the System panel), refreshed every 2
+# seconds; class "high" (shown orange) above 85% CPU or 90% RAM in use.
+glyph=$(printf '\363\260\215\233') # nf-md-memory
 prev_total=0
 prev_idle=0
 while :; do
@@ -13,9 +13,9 @@ while :; do
         cpu=$(((100 * ((total - prev_total) - (idle - prev_idle))) / (total - prev_total)))
     prev_total=$total
     prev_idle=$idle
-    mem=$(awk '/^MemTotal:/ {t = $2} /^MemAvailable:/ {a = $2} END {printf "%.1f", (t - a) / 1048576}' /proc/meminfo)
+    mem=$(awk '/^MemTotal:/ {t = $2} /^MemAvailable:/ {a = $2} END {printf "%d", 100 * (t - a) / t}' /proc/meminfo)
     class=normal
-    [ "$cpu" -ge 85 ] && class=high
-    printf '{"text": "%s%% %s  %sG %s", "class": "%s"}\n' "$cpu" "$cpu_glyph" "$mem" "$mem_glyph" "$class"
+    { [ "$cpu" -ge 85 ] || [ "$mem" -ge 90 ]; } && class=high
+    printf '{"text": "%s", "class": "%s"}\n' "$glyph" "$class"
     sleep 2
 done

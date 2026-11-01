@@ -1,5 +1,5 @@
 #!/bin/sh
-# Opens/closes a panel from waybar: toggle.sh wifi|volume|battery|system|power|date
+# Opens/closes a panel from waybar: toggle.sh wifi|volume|bluetooth|battery|system|display|power|date
 # On Hyprland the panel opens centered under the cursor (hyprctl cursorpos); elsewhere Popup.qml
 # finds the pointer itself. Starts the shell first if it isn't running yet.
 dir=$(dirname "$(readlink -f "$0")")

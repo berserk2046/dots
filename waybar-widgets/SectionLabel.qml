@@ -17,7 +17,7 @@ Item {
         text: label.text
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         font.weight: Font.DemiBold
     }
 

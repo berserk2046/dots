@@ -1,154 +1,170 @@
 {
+    // macOS-style menu bar: full width at the top, translucent (Hyprland blurs it, see hyprland.lua),
+    // icons instead of numbers; the panels behind each icon (~/.config/waybar-widgets) show the details.
+    // Colors follow System Settings → Appearance (colors.css, written by its appearance.sh).
     "position": "top",
-	"height": 22,
-	"margin-left": 100,
-	"margin-right": 100,
-    "modules-left": ["hyprland/workspaces", "hyprland/submap"],
-    "modules-center": ["custom/date" ],
-    "modules-right": ["custom/profile", "custom/spotify", "mpd", "pulseaudio", "network", "custom/system", "backlight", "battery", "tray", "custom/notifications", "custom/power"],
-    "hyprland/submap": {
-        "format": "<span style=\"italic\">{}</span>"
+    "layer": "top",
+    "height": 28,
+    "spacing": 0,
+    "modules-left": ["custom/power", "custom/app", "hyprland/submap"],
+    "modules-center": ["hyprland/workspaces"],
+    // System Settings → Control Center edits this list (waybar-config.py)
+    "modules-right": ["tray", "custom/spotify", "mpd", "privacy", "custom/keyboard", "custom/system", "bluetooth", "network", "pulseaudio", "backlight", "battery", "custom/notifications", "custom/date"],
+
+    // The Arch logo stands where the Apple menu is
+    "custom/power": {
+        "format": "",
+        "on-click": "~/.config/waybar-widgets/toggle.sh power",
+        "tooltip": false
     },
-    "hyprland/window": {
-       "format": "{}",
-       "on-click-middle": "hyprctl dispatch 'hl.dsp.window.close()'",
-       "on-click": "hyprctl dispatch 'hl.dsp.window.float()'",
-       "on-click-right": "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:scratchpad\", follow = false })'",
-       "on-scroll-up": "hyprctl dispatch 'hl.dsp.window.cycle_next({ next = false })'",
-       "on-scroll-down": "hyprctl dispatch 'hl.dsp.window.cycle_next()'",
-       "tooltip": false
+    // Name of the focused app, in bold
+    "custom/app": {
+        "exec": "~/.config/waybar/hypr-status.py app",
+        "return-type": "json",
+        "max-length": 40,
+        "tooltip": false
+    },
+    "hyprland/submap": {
+        "format": "{}"
+    },
+    // A dot per workspace; the active one is a wider pill (style.css)
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "format-icons": { "default": "" },
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
     },
 
     "tray": {
-        // "icon-size": 21,
+        "icon-size": 15,
         "spacing": 10
     },
-    // CPU and RAM in one module; click for the System panel (CPU graph, memory, storage, processes).
+    // Now playing, short; click for the Sound panel (Now Playing controls), right click to play/pause
+    "custom/spotify": {
+        "exec": "~/.config/waybar/mediaplayer.py --player spotify",
+        "format": "󰝚  {}",
+        "return-type": "json",
+        "max-length": 32,
+        "on-click": "~/.config/waybar-widgets/toggle.sh volume",
+        "on-click-right": "playerctl play-pause",
+        "on-scroll-up": "playerctl next",
+        "on-scroll-down": "playerctl previous",
+        "tooltip": false
+    },
+    // Orange while an app records the microphone, purple while the screen is shared
+    "privacy": {
+        "icon-size": 12,
+        "icon-spacing": 0,
+        "transition-duration": 250,
+        "modules": [
+            { "type": "audio-in", "tooltip": true, "tooltip-icon-size": 20 },
+            { "type": "screenshare", "tooltip": true, "tooltip-icon-size": 20 }
+        ]
+    },
+    // Keyboard layout ("US"), only with more than one; click for the next one
+    "custom/keyboard": {
+        "exec": "~/.config/waybar/hypr-status.py keyboard",
+        "return-type": "json",
+        "on-click": "hyprctl switchxkblayout all next"
+    },
+    // CPU and RAM; click for the System panel. Turns orange under heavy load
     "custom/system": {
         "exec": "~/.config/waybar-widgets/waybar-system.sh",
         "return-type": "json",
         "on-click": "~/.config/waybar-widgets/toggle.sh system",
         "tooltip": false
     },
-    "backlight": {
-        // "device": "acpi_video1",
-        "format": "{percent}% {icon}",
-        "format-icons": ["", "", "", "", "", "", "", "", ""],
-        "on-scroll-up":"sudo brightnessctl s +5%",
-        "on-scroll-down":"sudo brightnessctl s 5%-"
-    },
-    "battery": {
-        "states": {
-            "good": 82,
-            "warning": 30,
-            "critical": 15
-        },
-        "format": "{capacity}% {icon}",
-        "format-charging": "{capacity}% ",
-        "format-plugged": "{capacity}% ",
-        "format-good": "{capacity}% {icon}",
-        // "format-full": "",
-        "format-icons": ["b", "b", "b", "b", "b"],
-        "on-click": "~/.config/waybar-widgets/toggle.sh battery",
+    "bluetooth": {
+        "format": "󰂯",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "format-connected": "󰂱",
+        "on-click": "~/.config/waybar-widgets/toggle.sh bluetooth",
         "tooltip": false
     },
     "network": {
         // No fixed "interface": waybar follows the default route, so Ethernet shows when plugged in.
-        "format": "{ifname}",
-        "format-wifi": " ",
-        "format-ethernet": " ",
-        "format-disconnected": "",
-        "tooltip-format": "{ifname}",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}  ",
-        "tooltip-format-disconnected": "Disconnected",
+        "format": "{icon}",
+        "format-wifi": "{icon}",
+        "format-ethernet": "󰈀",
+        "format-linked": "󰤫",
+        "format-disconnected": "󰤮",
+        "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
         "tooltip": false, // the panel shows this, and the tooltip would cover it
-		"on-click": "~/.config/waybar-widgets/toggle.sh wifi",
-		"on-click-right": "foot wpa_cli"
+        "on-click": "~/.config/waybar-widgets/toggle.sh wifi"
     },
     "pulseaudio": {
-        // "scroll-step": 1, // %, can be a float
-        "format": "{volume}% {icon} {format_source}",
-        "format-bluetooth": "{volume}% {icon} {format_source}",
-        "format-bluetooth-muted": "󰗾 {icon} {format_source}",
-        "format-muted": "󰎊 {format_source}",
-        "format-source": "{volume}% ",
-        "format-source-muted": " ",
+        "format": "{icon}",
+        "format-bluetooth": "{icon}",
+        "format-muted": "󰝟",
+        "format-bluetooth-muted": "󰝟",
         "format-icons": {
-            "default": [" ", " ", "  "]
-		},
-		"on-click": "~/.config/waybar-widgets/toggle.sh volume",
-		"on-click-right": "pwvucontrol",
-		"tooltip": false
-	},
-    "custom/date": {
-            "format": "{}",
-            "interval": 60,
-            "exec": "date +'%Y-%m-%d %A %l:%M %p'",
-            "on-click": "~/.config/waybar-widgets/toggle.sh date",
-            "tooltip": false
+            "headphone": "󰋋",
+            "headset": "󰋋",
+            "default": ["󰕿", "󰖀", "󰕾"]
         },
+        "on-click": "~/.config/waybar-widgets/toggle.sh volume",
+        "on-click-right": "pwvucontrol",
+        "tooltip": false
+    },
+    "backlight": {
+        // "device": "acpi_video1",
+        "format": "{icon}",
+        "format-icons": ["󰖨"],
+        "on-scroll-up": "sudo brightnessctl s +5%",
+        "on-scroll-down": "sudo brightnessctl s 5%-",
+        "on-click": "~/.config/waybar-widgets/toggle.sh display",
+        "tooltip": false
+    },
+    // Percentage and a sideways battery, as on macOS; a bolt while charging, a plug when held (conservation)
+    "battery": {
+        "states": {
+            "warning": 20,
+            "critical": 10
+        },
+        "format": "{capacity}%  {icon}",
+        "format-charging": "{capacity}%   {icon}",
+        "format-plugged": "{capacity}%   {icon}",
+        "format-icons": ["", "", "", "", ""],
+        "on-click": "~/.config/waybar-widgets/toggle.sh battery",
+        "tooltip": false
+    },
     // Bell with the unread count (moon during Do Not Disturb), written by the lock screen shell.
     // Click: Notification Center, right click: Do Not Disturb.
     "custom/notifications": {
-            "exec": "cat \"$XDG_RUNTIME_DIR/lockscreen/notifications.json\" 2>/dev/null",
-            "return-type": "json",
-            "interval": "once",
-            "signal": 9,
-            "on-click": "qs -p ~/.config/lockscreen ipc call notifications toggle",
-            "on-click-right": "qs -p ~/.config/lockscreen ipc call notifications toggleDnd"
-        },
-    "custom/power": {
-            "format": " ",
-            "on-click": "~/.config/waybar-widgets/toggle.sh power",
-            "on-click-right": "~/.config/waybar/session-menu.sh",
-            "tooltip": false
-        },
-	"custom/profile": {
-		"format": "{}",
-		"interval": 2,
-		"exec": "cat /sys/firmware/acpi/platform_profile",
-		"tooltip": false
-		},
-	"custom/spotify": {
-		"exec": "~/.config/waybar/mediaplayer.py --player spotify",
-		"format": "{}  ",
-		"return-type": "json",
-		"on-click": "playerctl play-pause",
-		"on-scroll-up": "playerctl next",
-		"on-scroll-down": "playerctl previous"
-	},
+        "exec": "cat \"$XDG_RUNTIME_DIR/lockscreen/notifications.json\" 2>/dev/null",
+        "return-type": "json",
+        "interval": "once",
+        "signal": 9,
+        "on-click": "qs -p ~/.config/lockscreen ipc call notifications toggle",
+        "on-click-right": "qs -p ~/.config/lockscreen ipc call notifications toggleDnd"
+    },
+    // Format set in System Settings → Control Center
+    "custom/date": {
+        "format": "{}",
+        "interval": 60,
+        "exec": "date +'%a %b %-d  %-l:%M %p'",
+        "on-click": "~/.config/waybar-widgets/toggle.sh date",
+        "tooltip": false
+    },
 
     "mpd": {
-        "format": "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{title} ({elapsedTime:%M:%S}/{totalTime:%M:%S})",
-        "format-disconnected": "Disconnected ",
-        "format-stopped": "",
+        "format": "{stateIcon} {title}",
+        "format-disconnected": "",
+        "format-stopped": "",
         "unknown-tag": "N/A",
         "interval": 2,
-        "consume-icons": {
-            "on": " "
-        },
-        "random-icons": {
-            "on": " "
-        },
-        "repeat-icons": {
-            "on": " "
-        },
-        "single-icons": {
-            "on": "1 "
-        },
+        "max-length": 32,
         "state-icons": {
-            "paused": "",
-            "playing": ""
+            "paused": "󰏤",
+            "playing": "󰐊"
         },
         "on-click": "mpc toggle",
         "on-click-right": "mpc repeat",
         "on-click-middle": "mpc stop",
-        "on-scroll-up":"mpc next",
-        "on-scroll-down":"mpc prev",
+        "on-scroll-up": "mpc next",
+        "on-scroll-down": "mpc prev",
         "tooltip-format": "MPD (connected), {artist} - {album} - {title} ⸨{songPosition}/{queueLength}⸩",
         "tooltip-format-disconnected": "MPD (disconnected)"
-    },
-
-
+    }
 }

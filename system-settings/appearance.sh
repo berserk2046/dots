@@ -1,6 +1,7 @@
 #!/bin/sh
-# Applies Appearance settings to GTK (gsettings for GTK 4/libadwaita, settings.ini for GTK 3)
-# and Hyprland's cursor:
+# Applies Appearance settings to GTK (gsettings for GTK 4/libadwaita, settings.ini for GTK 3, the
+# theme's gtk-4.0 CSS linked into ~/.config/gtk-4.0 for libadwaita)
+# Hyprland (cursor, title bar colors) and waybar's colors:
 #   appearance.sh scheme dark|light     color scheme; swaps a -Dark/-Light GTK theme to its other variant
 #   appearance.sh gtk <theme>
 #   appearance.sh icons <theme>
@@ -36,8 +37,34 @@ theme_exists() {
     return 1
 }
 
+# libadwaita apps ignore the GTK theme and only load ~/.config/gtk-4.0/gtk.css, so the theme's GTK 4
+# files are linked there (what the themes' own installers do with their libadwaita option). Removed
+# for themes without GTK 4 files (e.g. Adwaita); files there that aren't our links are left alone.
+adwaita_links() {
+    src=
+    for d in "$HOME/.themes" "$HOME/.local/share/themes" /usr/local/share/themes /usr/share/themes; do
+        [ -f "$d/$1/gtk-4.0/gtk.css" ] && { src=$d/$1/gtk-4.0; break; }
+    done
+    dest=$HOME/.config/gtk-4.0
+    mkdir -p "$dest"
+    for f in gtk.css gtk-dark.css assets windows-assets; do
+        [ -e "$dest/$f" ] && [ ! -L "$dest/$f" ] && continue
+        rm -f "$dest/$f"
+        [ -n "$src" ] && [ -e "$src/$f" ] && ln -s "$src/$f" "$dest/$f"
+    done
+    return 0
+}
+
 case "${1:-}" in
 scheme)
+    # e.g. WhiteSur-Light <-> WhiteSur-Dark; first, so whatever follows color-scheme sees the new theme
+    current=$(gsettings get $schema gtk-theme | tr -d "'")
+    if [ "$2" = dark ]; then other=$(echo "$current" | sed 's/-[Ll]ight$/-Dark/'); else other=$(echo "$current" | sed 's/-[Dd]ark$/-Light/'); fi
+    if [ "$other" != "$current" ] && theme_exists "$other"; then
+        gsettings set $schema gtk-theme "$other"
+        ini gtk-theme-name "$other"
+        adwaita_links "$other"
+    fi
     if [ "$2" = dark ]; then
         gsettings set $schema color-scheme prefer-dark
         ini gtk-application-prefer-dark-theme 1
@@ -45,17 +72,18 @@ scheme)
         gsettings set $schema color-scheme prefer-light
         ini gtk-application-prefer-dark-theme 0
     fi
-    # e.g. WhiteSur-Light <-> WhiteSur-Dark
-    current=$(gsettings get $schema gtk-theme | tr -d "'")
-    if [ "$2" = dark ]; then other=$(echo "$current" | sed 's/-[Ll]ight$/-Dark/'); else other=$(echo "$current" | sed 's/-[Dd]ark$/-Light/'); fi
-    if [ "$other" != "$current" ] && theme_exists "$other"; then
-        gsettings set $schema gtk-theme "$other"
-        ini gtk-theme-name "$other"
+    # Title bars (hyprbars in hyprland.lua) read the scheme from settings.ini when the config loads
+    hyprctl reload config-only >/dev/null 2>&1
+    # The menu bar: waybar's style.css imports colors.css
+    if [ -f "$HOME/.config/waybar/colors-$2.css" ]; then
+        cp "$HOME/.config/waybar/colors-$2.css" "$HOME/.config/waybar/colors.css"
+        pkill -SIGUSR2 -x waybar
     fi
     ;;
 gtk)
     gsettings set $schema gtk-theme "$2"
     ini gtk-theme-name "$2"
+    adwaita_links "$2"
     ;;
 icons)
     gsettings set $schema icon-theme "$2"

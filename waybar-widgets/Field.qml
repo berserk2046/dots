@@ -29,7 +29,7 @@ Rectangle {
         selectionColor: Theme.accent
         selectedTextColor: "#ffffff"
         font.family: Theme.font
-        font.pixelSize: 13
+        font.pixelSize: Theme.fontSize(13)
         clip: true
         echoMode: field.secret && !field.reveal ? TextInput.Password : TextInput.Normal
         selectByMouse: true

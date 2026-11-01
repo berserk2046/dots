@@ -162,7 +162,7 @@ Column {
                     text: (panel.fullName || panel.user).split(/\s+/).filter(w => w).slice(0, 2).map(w => w[0].toUpperCase()).join("")
                     color: "#ffffff"
                     font.family: Theme.font
-                    font.pixelSize: 16
+                    font.pixelSize: Theme.fontSize(16)
                     font.weight: Font.DemiBold
                 }
             }
@@ -181,7 +181,7 @@ Column {
                     text: panel.fullName || panel.user
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 14
+                    font.pixelSize: Theme.fontSize(14)
                     font.weight: Font.Bold
                 }
 
@@ -191,7 +191,7 @@ Column {
                     text: [panel.host, panel.uptime > 0 ? panel.uptimeText() : ""].filter(x => x).join("  ·  ")
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
         }
@@ -293,7 +293,7 @@ Column {
             text: panel.confirmText(panel.pending)[0]
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.fontSize(13)
             font.weight: Font.DemiBold
         }
 
@@ -305,7 +305,7 @@ Column {
             text: panel.confirmText(panel.pending)[1].arg(panel.remaining)
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
             font.features: {
                 "tnum": 1
             }

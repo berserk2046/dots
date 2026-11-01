@@ -113,7 +113,7 @@ Item {
         text: slider.minLabel
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 10
+        font.pixelSize: Theme.fontSize(10)
     }
 
     Text {
@@ -123,6 +123,6 @@ Item {
         text: slider.maxLabel
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 10
+        font.pixelSize: Theme.fontSize(10)
     }
 }

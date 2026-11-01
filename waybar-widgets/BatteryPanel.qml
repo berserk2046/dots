@@ -80,7 +80,7 @@ Column {
                 text: qsTr("Battery")
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 14
+                font.pixelSize: Theme.fontSize(14)
                 font.weight: Font.Bold
             }
 
@@ -88,7 +88,7 @@ Column {
                 text: panel.bat ? (panel.bat.acOnline ? qsTr("Power Source: Power Adapter") : qsTr("Power Source: Battery")) : ""
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
 
@@ -99,7 +99,7 @@ Column {
             text: panel.bat ? panel.bat.level + "%" : ""
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 14
+            font.pixelSize: Theme.fontSize(14)
             font.weight: Font.DemiBold
         }
     }
@@ -110,7 +110,7 @@ Column {
         text: qsTr("No battery found")
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         bottomPadding: 6
     }
 
@@ -150,7 +150,7 @@ Column {
                 text: panel.timeText()
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 20
+                font.pixelSize: Theme.fontSize(20)
                 font.weight: Font.DemiBold
             }
 
@@ -161,7 +161,7 @@ Column {
                 text: panel.timeCaption()
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
     }
@@ -271,7 +271,7 @@ Column {
             text: panel.sys.profileError
             color: Theme.danger
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
         }
     }
 
@@ -302,7 +302,7 @@ Column {
                     text: qsTr("Battery Conservation")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fontSize(13)
                 }
 
                 Text {
@@ -311,7 +311,7 @@ Column {
                     text: qsTr("Stops charging before full to extend battery life")
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
 
@@ -334,7 +334,7 @@ Column {
             text: panel.sys.chargeError
             color: Theme.danger
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
         }
     }
 
@@ -365,6 +365,6 @@ Column {
         text: qsTr("No Apps Using Significant Energy")
         color: Theme.textTertiary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 }

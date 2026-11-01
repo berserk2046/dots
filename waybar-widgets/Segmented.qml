@@ -27,14 +27,14 @@ Rectangle {
                 width: (seg.width - 4) / seg.options.length
                 height: seg.height - 4
                 radius: 5
-                color: seg.current === index ? "#3dffffff" : "transparent"
+                color: seg.current === index ? Theme.segmentSelected : "transparent"
 
                 Text {
                     anchors.centerIn: parent
                     text: parent.modelData
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fontSize(12)
                 }
 
                 MouseArea {

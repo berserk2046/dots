@@ -9,6 +9,6 @@ Text {
     wrapMode: Text.WordWrap
     color: Theme.textSecondary
     font.family: Theme.font
-    font.pixelSize: 11
+    font.pixelSize: Theme.fontSize(11)
     lineHeight: 1.15
 }

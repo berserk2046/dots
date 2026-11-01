@@ -1,7 +1,7 @@
 # waybar-widgets
 
-macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `battery`,
-`custom/system`, `custom/power` and `custom/date` modules, built with Quickshell. They share sway-dock's look.
+macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `bluetooth`, `battery`,
+`custom/system`, `backlight`, `custom/power` and `custom/date` modules, built with Quickshell. They share sway-dock's look.
 
 **Wi-Fi** (`WifiPanel.qml`, `Network.qml`)
 - Wi-Fi on/off (rfkill) and the interface name in the header
@@ -20,6 +20,14 @@ macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `batt
 - Now Playing for MPRIS players: art, title, artist, previous/play/next, click the bar to seek
 - Per-app volume for everything playing
 
+**Bluetooth** (`BluetoothPanel.qml`)
+- Bluetooth on/off
+- Your devices: click to connect or disconnect, spinner while it happens, battery when the device reports it
+- Nearby devices (the first six; System Settings lists them all): click to pair and connect, again to cancel.
+  While the panel is open it's the pairing agent (`BluetoothPairing.qml`, `bt-agent.py`, shared with System
+  Settings), so a code to confirm or a PIN to type shows up inline (`PairingPrompt.qml`)
+- Bluetooth Settings… opens System Settings → Bluetooth
+
 **Battery** (`BatteryPanel.qml`, `System.qml`)
 - Level, power source, and time remaining or until full (from the averaged power draw)
 - Battery health: condition, maximum capacity (full charge vs. design), cycle count
@@ -35,6 +43,16 @@ macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `batt
 - Memory: used (colored by pressure) and cached, memory pressure, swap
 - Storage: per disk, a bar with available and total space
 - Top processes by CPU, helper processes counted as their app (e.g. Firefox)
+
+**Display** (`DisplayPanel.qml`, `Display.qml`) for the `backlight` module, like Control Center's Display
+- Brightness (brightnessctl), following changes made elsewhere while open
+- Night Shift on/off ("until turned off"), the moon turns blue while it's on (by hand or by schedule)
+- Schedule Off / Custom, with From and To time steppers (30 minutes; arrows or scroll)
+- Color temperature, Less Warm to More Warm (6500 K to 2500 K)
+- Display Settings… opens System Settings → Displays (`SettingsLink.qml`, shared with Bluetooth)
+- Night Shift shares System Settings' values (`displays.nightShift` in its `settings.json`) and is applied
+  the same way: `~/.config/hypr/hyprsunset.conf` is rewritten, hyprsunset restarted, and `night_shift` in
+  `~/.config/hypr/system-settings.lua` updated so it starts again at login
 
 **Power** (`PowerPanel.qml`), like the Apple menu
 - Your name (or user), hostname and uptime, with your picture from `~/.face` (initials otherwise)
@@ -79,7 +97,7 @@ No extra packages are needed.
 
 ## Run
 
-waybar's `on-click` runs `~/.config/waybar-widgets/toggle.sh wifi|volume|battery|system|power|date`, which starts the
+waybar's `on-click` runs `~/.config/waybar-widgets/toggle.sh wifi|volume|bluetooth|battery|system|display|power|date`, which starts the
 shell on the first click.
 To start it with Hyprland instead (in `hyprland.lua`):
 
@@ -89,7 +107,7 @@ hl.on("hyprland.start", function()
 end)
 ```
 
-IPC: `qs -p ~/.config/waybar-widgets ipc call wifi|volume|battery|system|power|date toggle|open|close`
+IPC: `qs -p ~/.config/waybar-widgets ipc call wifi|volume|bluetooth|battery|system|display|power|date toggle|open|close`
 
 The card opens under the pointer, so under the icon you clicked. Esc or a click outside closes it.
 
@@ -99,7 +117,8 @@ to the QML files, so they work from either shell. Its Control Center pane picks 
 
 ## Configure
 
-- Colors, font (`SF Pro`), glyphs and width: `Theme.qml`
+- Colors, font (`SF Pro`), glyphs and width: `Theme.qml`; `fontScale` there multiplies every text size
+  (System Settings sets its own in its `shell.qml`)
 - Wi-Fi interface: `wifiInterface` on `Network` in `shell.qml` (empty picks the first wireless one)
 - Profile picture: any square image at `~/.face` (`cp picture.png ~/.face`); it's re-read each time
   the power menu opens. Your full name comes from the account's GECOS field (`sudo chfn -f "Name" $USER`)

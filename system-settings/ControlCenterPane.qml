@@ -10,14 +10,14 @@ Column {
     // waybar module -> name and icon, in menu bar order
     readonly property var modules: [
         {
-            id: "custom/profile",
-            title: qsTr("Power Profile"),
-            glyph: Theme.iBattery,
-            color: "#30d158"
+            id: "tray",
+            title: qsTr("App Icons (tray)"),
+            glyph: Theme.iApps,
+            color: "#8e8e93"
         },
         {
             id: "custom/spotify",
-            title: qsTr("Spotify"),
+            title: qsTr("Now Playing (Spotify)"),
             glyph: Theme.iMusic,
             color: "#1db954"
         },
@@ -28,10 +28,28 @@ Column {
             color: "#ff375f"
         },
         {
-            id: "pulseaudio",
-            title: qsTr("Sound"),
-            glyph: Theme.iVolumeHigh,
-            color: "#ff375f"
+            id: "privacy",
+            title: qsTr("Microphone & Screen Sharing in Use"),
+            glyph: Theme.iMic,
+            color: "#ff9f0a"
+        },
+        {
+            id: "custom/keyboard",
+            title: qsTr("Keyboard Layout"),
+            glyph: Theme.iKeyboard,
+            color: "#8e8e93"
+        },
+        {
+            id: "custom/system",
+            title: qsTr("CPU & Memory"),
+            glyph: Theme.iDisk,
+            color: "#8e8e93"
+        },
+        {
+            id: "bluetooth",
+            title: qsTr("Bluetooth"),
+            glyph: Theme.iBluetooth,
+            color: "#0a84ff"
         },
         {
             id: "network",
@@ -40,10 +58,10 @@ Column {
             color: "#0a84ff"
         },
         {
-            id: "custom/system",
-            title: qsTr("CPU & Memory"),
-            glyph: Theme.iDisk,
-            color: "#8e8e93"
+            id: "pulseaudio",
+            title: qsTr("Sound"),
+            glyph: Theme.iVolumeHigh,
+            color: "#ff375f"
         },
         {
             id: "backlight",
@@ -58,22 +76,10 @@ Column {
             color: "#30d158"
         },
         {
-            id: "tray",
-            title: qsTr("App Icons (tray)"),
-            glyph: Theme.iApps,
-            color: "#8e8e93"
-        },
-        {
             id: "custom/notifications",
             title: qsTr("Notifications"),
             glyph: Theme.iBell,
             color: "#ff453a"
-        },
-        {
-            id: "custom/power",
-            title: qsTr("Power Menu"),
-            glyph: Theme.iPower,
-            color: "#48484a"
         }
     ]
     readonly property var hidden: Store.get("controlCenter", "hidden", [])
@@ -86,7 +92,8 @@ Column {
         if (!shown)
             next.push(id);
         Store.set("controlCenter", "hidden", next);
-        const list = modules.map(m => m.id).filter(m => !next.includes(m));
+        // The clock always ends the menu bar, as on macOS.
+        const list = [...modules.map(m => m.id).filter(m => !next.includes(m)), "custom/date"];
         Store.runQueued("waybar", ["python3", Store.script("waybar-config.py"), "modules", JSON.stringify(list)]);
     }
 
@@ -99,8 +106,10 @@ Column {
         }, clock);
         next[key] = value;
         Store.set("controlCenter", "clock", next);
-        const time = (next.hours24 ? "%H:%M" : "%l:%M") + (next.seconds ? ":%S" : "") + (next.hours24 ? "" : " %p");
-        const format = [next.date ? "%Y-%m-%d" : "", next.weekday ? "%A" : "", time].filter(p => p).join(" ");
+        // As on macOS: "Fri Oct 31  9:41 AM"
+        const time = (next.hours24 ? "%H:%M" : "%-l:%M") + (next.seconds ? ":%S" : "") + (next.hours24 ? "" : " %p");
+        const day = [next.weekday ? "%a" : "", next.date ? "%b %-d" : ""].filter(p => p).join(" ");
+        const format = [day, time].filter(p => p).join("  ");
         Store.runQueued("waybar", ["python3", Store.script("waybar-config.py"), "clock", format, next.seconds ? "1" : "60"]);
     }
 
@@ -131,7 +140,7 @@ Column {
     }
 
     Caption {
-        text: qsTr("Waybar reloads right away. Workspaces stay on the left and the clock in the middle.")
+        text: qsTr("Waybar reloads right away. The Arch menu and the app name stay on the left, the workspaces in the middle and the clock at the end.")
     }
 
     GroupTitle {

@@ -41,7 +41,7 @@ Column {
         wrapMode: Text.WordWrap
         color: Theme.danger
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     // A network in the known/other lists. Secured networks not yet saved expand to ask for
@@ -146,7 +146,7 @@ Column {
             text: qsTr("Enterprise (802.1X) networks need to be set up in wpa_supplicant.conf.")
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
         }
         Field {
             id: password
@@ -213,7 +213,7 @@ Column {
                 text: qsTr("Wi-Fi")
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 14
+                font.pixelSize: Theme.fontSize(14)
                 font.weight: Font.Bold
             }
 
@@ -221,7 +221,7 @@ Column {
                 text: panel.net.wifi || qsTr("No wireless interface")
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
 
@@ -243,7 +243,7 @@ Column {
         text: qsTr("Can't reach wpa_supplicant on %1. Is it running, and are you in its ctrl_interface_group?").arg(panel.net.wifi)
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         bottomPadding: 6
     }
 
@@ -253,7 +253,7 @@ Column {
         text: qsTr("Wi-Fi is disabled by a hardware switch.")
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         bottomPadding: 6
     }
 
@@ -450,7 +450,7 @@ Column {
                     text: panel.net.scanning ? qsTr("Searching…") : qsTr("No other networks found")
                     color: Theme.textTertiary
                     font.family: Theme.font
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fontSize(12)
                 }
             }
         }
@@ -631,7 +631,7 @@ Column {
                 text: qsTr("Configure IPv4")
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
             Segmented {
                 visible: ethRow.open

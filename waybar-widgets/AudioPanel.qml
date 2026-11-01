@@ -106,7 +106,7 @@ Column {
         text: node?.audio ? Math.round(node.audio.volume * 100) + "%" : ""
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 11
+        font.pixelSize: Theme.fontSize(11)
         font.features: {
             "tnum": 1
         }
@@ -175,7 +175,7 @@ Column {
             text: qsTr("Sound")
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 14
+            font.pixelSize: Theme.fontSize(14)
             font.weight: Font.Bold
         }
     }
@@ -255,7 +255,7 @@ Column {
         text: Pipewire.ready ? qsTr("No output devices") : qsTr("Connecting to PipeWire…")
         color: Theme.textTertiary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     // ---- Input ----
@@ -314,7 +314,7 @@ Column {
         text: qsTr("No input devices")
         color: Theme.textTertiary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     // ---- Now Playing ----
@@ -394,7 +394,7 @@ Column {
                     text: player.p.trackTitle || player.p.identity
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fontSize(13)
                     font.weight: Font.DemiBold
                 }
 
@@ -404,7 +404,7 @@ Column {
                     text: player.p.trackArtist || player.p.trackAlbum || player.p.identity
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fontSize(12)
                 }
 
                 Text {
@@ -414,7 +414,7 @@ Column {
                     text: player.p.identity
                     color: Theme.textTertiary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
 
@@ -461,7 +461,7 @@ Column {
                     text: panel.formatTime(player.p.position)
                     color: Theme.textTertiary
                     font.family: Theme.font
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fontSize(10)
                     font.features: {
                         "tnum": 1
                     }
@@ -503,7 +503,7 @@ Column {
                     text: panel.formatTime(player.p.length)
                     color: Theme.textTertiary
                     font.family: Theme.font
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fontSize(10)
                     font.features: {
                         "tnum": 1
                     }
@@ -573,7 +573,7 @@ Column {
                 }
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
 
             PillSlider {

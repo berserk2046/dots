@@ -37,7 +37,7 @@ Item {
             width: slider.height + (slider.width - slider.height) * slider.shown
             height: parent.height
             radius: height / 2
-            color: slider.dimmed ? "#8cffffff" : Theme.fill
+            color: slider.dimmed ? Theme.fillDimmed : Theme.fill
 
             Behavior on width {
                 enabled: !slider.dragging

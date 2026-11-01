@@ -179,7 +179,14 @@ ShellRoot {
         faceVersion++;
     }
 
-    Component.onCompleted: refreshUser()
+    // Text size of the whole window (also the shared waybar panels shown as panes), 1 = the bar's size.
+    readonly property real fontScale: 1.15
+
+    Component.onCompleted: {
+        Theme.fontScale = fontScale;
+        Theme.followScheme = true;
+        refreshUser();
+    }
 
     Connections {
         target: Ui
@@ -221,7 +228,8 @@ ShellRoot {
         implicitWidth: 920
         implicitHeight: 680
         minimumSize: Qt.size(780, 480)
-        color: Theme.panel
+        // See-through, so Hyprland blurs what's behind the sidebar; the pane area has its own background.
+        color: "transparent"
 
         // Closing the window quits the app.
         onClosed: root.quit()
@@ -250,7 +258,7 @@ ShellRoot {
 
                 width: 230
                 height: parent.height
-                color: "#0d0d0e"
+                color: Theme.sidebar
 
                 Rectangle {
                     anchors.right: parent.right
@@ -320,9 +328,9 @@ ShellRoot {
                                     width: parent.width
                                     elide: Text.ElideRight
                                     text: root.fullName || Quickshell.env("USER")
-                                    color: Theme.text
+                                    color: Ui.pane === "users" ? "#ffffff" : Theme.text
                                     font.family: Theme.font
-                                    font.pixelSize: 13
+                                    font.pixelSize: Theme.fontSize(13)
                                     font.weight: Font.DemiBold
                                 }
 
@@ -332,7 +340,7 @@ ShellRoot {
                                     text: qsTr("Users & Groups")
                                     color: Ui.pane === "users" ? "#ccffffff" : Theme.textSecondary
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fontSize(11)
                                 }
                             }
 
@@ -385,9 +393,9 @@ ShellRoot {
                                             anchors.verticalCenter: parent.verticalCenter
                                             elide: Text.ElideRight
                                             text: item.modelData.title
-                                            color: Theme.text
+                                            color: Ui.pane === item.modelData.id ? "#ffffff" : Theme.text
                                             font.family: Theme.font
-                                            font.pixelSize: 13
+                                            font.pixelSize: Theme.fontSize(13)
                                         }
 
                                         MouseArea {
@@ -410,7 +418,7 @@ ShellRoot {
                             text: qsTr("No Results")
                             color: Theme.textSecondary
                             font.family: Theme.font
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.fontSize(13)
                         }
                     }
                 }
@@ -424,6 +432,11 @@ ShellRoot {
                 anchors.left: sidebar.right
                 anchors.right: parent.right
                 height: parent.height
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Theme.panel
+                }
 
                 // Toolbar: back/forward and the pane (or page) title
                 Item {
@@ -456,7 +469,7 @@ ShellRoot {
                             text: paneLoader.item?.pageTitle || root.currentPane.title
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 15
+                            font.pixelSize: Theme.fontSize(15)
                             font.weight: Font.DemiBold
                         }
                     }

@@ -37,7 +37,7 @@ Item {
         anchors.fill: parent
         anchors.margins: 1
         radius: 9
-        color: row.selected ? Theme.hover : mouse.pressed ? Theme.pressed : mouse.containsMouse ? "#0dffffff" : "transparent"
+        color: row.selected ? Theme.hover : mouse.pressed ? Theme.pressed : mouse.containsMouse ? (Theme.light ? "#08000000" : "#0dffffff") : "transparent"
         visible: row.clickable || row.selected
     }
 
@@ -84,7 +84,7 @@ Item {
                 text: row.title
                 color: row.titleColor
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.fontSize(13)
             }
 
             Text {
@@ -94,7 +94,7 @@ Item {
                 text: row.subtitle
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
 

@@ -19,7 +19,7 @@ Item {
         text: title.text
         color: Theme.text
         font.family: Theme.font
-        font.pixelSize: 13
+        font.pixelSize: Theme.fontSize(13)
         font.weight: Font.DemiBold
     }
 

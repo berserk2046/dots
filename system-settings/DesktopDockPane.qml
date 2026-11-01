@@ -315,7 +315,7 @@ Column {
                 }
             }
             border.width: 4
-            border.color: "#2c2c2e"
+            border.color: Theme.solidBorder
         }
 
         Dropdown {

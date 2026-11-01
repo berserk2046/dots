@@ -3,7 +3,6 @@ import Quickshell.Widgets
 import qs.shared
 
 // Appearance: light/dark/auto for apps, GTK theme, icon theme (also the Dock's) and pointer.
-// The menu bar, Dock and panels stay dark either way.
 Column {
     id: pane
 
@@ -15,7 +14,8 @@ Column {
     property var preview: []
 
     readonly property string mode: Store.get("appearance", "mode", current.scheme === "prefer-light" ? "light" : "dark")
-    readonly property string gtkTheme: Store.get("appearance", "gtkTheme", current.gtk ?? "Adwaita")
+    // What GTK uses now: light/dark can swap a …-Dark/…-Light theme for its other variant (also the Dock's Auto).
+    readonly property string gtkTheme: current.gtk || Store.get("appearance", "gtkTheme", "Adwaita")
     readonly property string iconTheme: Store.get("appearance", "iconTheme", current.icons ?? "MacTahoe-dark")
     readonly property string cursorTheme: Store.get("appearance", "cursorTheme", current.cursors ?? "default")
     readonly property int cursorSize: Store.get("appearance", "cursorSize", Number(current.size) || 24)
@@ -57,6 +57,23 @@ Column {
         Store.set("appearance", "mode", mode);
         const hour = new Date().getHours();
         Store.appearance(["scheme", mode === "auto" ? (hour >= 7 && hour < 19 ? "light" : "dark") : mode]);
+    }
+
+    // Light/dark may have swapped the GTK theme for its other variant, here or from the Dock's Auto.
+    Connections {
+        target: Theme
+
+        function onSchemeChanged() {
+            Store.run(["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"], (code, out) => {
+                const theme = out.trim().replace(/'/g, "");
+                if (code !== 0 || !theme)
+                    return;
+                pane.current = Object.assign({}, pane.current, {
+                    gtk: theme
+                });
+                Store.set("appearance", "gtkTheme", theme);
+            });
+        }
     }
 
     // Mini window drawings for the Light / Dark / Auto choices.
@@ -157,7 +174,7 @@ Column {
             text: tile.label
             color: pane.mode === tile.mode ? Theme.text : Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
             font.weight: pane.mode === tile.mode ? Font.DemiBold : Font.Normal
         }
     }
@@ -187,7 +204,7 @@ Column {
     }
 
     Caption {
-        text: qsTr("For GTK and libadwaita apps; the menu bar, Dock and panels always stay dark. Auto is light from 7 AM to 7 PM. A theme named …-Dark or …-Light switches to its other variant with it.")
+        text: qsTr("For GTK, libadwaita and Qt apps (open libadwaita apps pick up a new theme once restarted), title bars, the menu bar and its panels, the Dock and System Settings. Auto is light from 7 AM to 7 PM. A theme named …-Dark or …-Light switches to its other variant with it.")
     }
 
     GroupTitle {
@@ -204,6 +221,9 @@ Column {
                 options: pane.gtkThemes
                 value: pane.gtkTheme
                 onPicked: theme => {
+                    pane.current = Object.assign({}, pane.current, {
+                        gtk: theme
+                    });
                     Store.set("appearance", "gtkTheme", theme);
                     Store.appearance(["gtk", theme]);
                 }
@@ -284,7 +304,7 @@ Column {
                 text: pane.cursorSize + " px"
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
     }

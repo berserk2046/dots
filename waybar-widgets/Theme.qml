@@ -1,32 +1,64 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
-// Colors, fonts and glyphs shared by the panels. Colors match sway-dock's menus.
+// Colors, fonts and glyphs shared by the panels. Colors match sway-dock's menus. They're dark unless a
+// shell sets `followScheme` (these panels and System Settings do): then they follow the GTK color
+// scheme that System Settings → Appearance sets, light or dark.
 Singleton {
-    readonly property color panel: "#000000"
-    readonly property color border: "#26ffffff"
-    readonly property color separator: "#1fffffff"
-    readonly property color hover: "#1affffff"
-    readonly property color pressed: "#2bffffff"
-    readonly property color text: "#ffffff"
-    readonly property color textSecondary: "#99ffffff"
-    readonly property color textTertiary: "#59ffffff"
-    readonly property color accent: "#0a84ff"
-    readonly property color circle: "#33ffffff"
-    readonly property color track: "#2effffff"
-    readonly property color fill: "#ebffffff"
-    readonly property color danger: "#ff6961"
-    readonly property color success: "#30d158"
-    readonly property color field: "#14ffffff"
+    id: theme
+
+    property bool followScheme: false
+    property string scheme: "" // org.gnome.desktop.interface color-scheme
+    readonly property bool light: followScheme && scheme === "prefer-light"
+
+    readonly property color panel: light ? "#ececec" : "#000000"
+    readonly property color border: light ? "#26000000" : "#26ffffff"
+    readonly property color separator: light ? "#1a000000" : "#1fffffff"
+    readonly property color hover: light ? "#12000000" : "#1affffff"
+    readonly property color pressed: light ? "#21000000" : "#2bffffff"
+    readonly property color text: light ? "#d9000000" : "#ffffff"
+    readonly property color textSecondary: light ? "#80000000" : "#99ffffff"
+    readonly property color textTertiary: light ? "#4d000000" : "#59ffffff"
+    readonly property color accent: light ? "#007aff" : "#0a84ff"
+    readonly property color circle: light ? "#1f000000" : "#33ffffff"
+    readonly property color track: light ? "#1f000000" : "#2effffff"
+    readonly property color fill: light ? "#8e8e93" : "#ebffffff"
+    readonly property color fillDimmed: light ? "#c7c7cc" : "#8cffffff"
+    readonly property color danger: light ? "#ff3b30" : "#ff6961"
+    readonly property color success: light ? "#34c759" : "#30d158"
+    readonly property color field: light ? "#0f000000" : "#14ffffff"
+    // Buttons, pop-up buttons and the selected segment
+    readonly property color button: light ? "#ffffff" : "#1fffffff"
+    readonly property color buttonHover: light ? "#f5f5f5" : "#29ffffff"
+    readonly property color buttonBorder: light ? "#26000000" : "transparent"
+    readonly property color segmentSelected: light ? "#ffffff" : "#3dffffff"
     // Solid colors, as in the lock screen's Notification Center (System Settings uses them too)
-    readonly property color solidCard: "#1c1c1e"
-    readonly property color solidCardHover: "#2c2c2e"
-    readonly property color solidBorder: "#2c2c2e"
-    readonly property color solidCircle: "#3a3a3c"
+    readonly property color solidCard: light ? "#ffffff" : "#1c1c1e"
+    readonly property color solidCardHover: light ? "#f2f2f2" : "#2c2c2e"
+    readonly property color solidBorder: light ? "#e0e0e0" : "#2c2c2e"
+    readonly property color solidCircle: light ? "#e5e5ea" : "#3a3a3c"
+    // System Settings' sidebar, see-through so Hyprland blurs what's behind the window
+    readonly property color sidebar: light ? "#c7f0f0f0" : "#bf161618"
+
+    Process {
+        running: theme.followScheme
+        command: ["sh", "-c", "gsettings get org.gnome.desktop.interface color-scheme; gsettings monitor org.gnome.desktop.interface color-scheme"]
+        stdout: SplitParser {
+            // "'prefer-dark'" from get, "color-scheme: 'prefer-dark'" from monitor
+            onRead: line => theme.scheme = line.replace(/^color-scheme:\s*/, "").replace(/'/g, "").trim()
+        }
+    }
 
     readonly property string font: "SF Pro"
     readonly property string iconFont: "FiraCode Nerd Font"
+    // Multiplies every text size (not the glyphs); System Settings raises it in its shell.qml.
+    property real fontScale: 1
+
+    function fontSize(px) {
+        return Math.round(px * fontScale);
+    }
 
     readonly property int panelWidth: 320
     readonly property int radius: 14
@@ -106,4 +138,22 @@ Singleton {
     readonly property string iChevronUp: String.fromCodePoint(0xF0143)
     readonly property string iEarth: String.fromCodePoint(0xF01E7)
     readonly property string iArch: String.fromCodePoint(0xF303) // Arch Linux logo
+
+    // Glyph for a Bluetooth device from its BlueZ icon name ("audio-headset", "input-mouse"...).
+    function bluetoothGlyph(icon) {
+        icon = icon ?? "";
+        if (icon.includes("headset") || icon.includes("headphone"))
+            return iHeadphones;
+        if (icon.includes("audio") || icon.includes("speaker"))
+            return iSpeaker;
+        if (icon.includes("keyboard"))
+            return iKeyboard;
+        if (icon.includes("mouse"))
+            return iMouse;
+        if (icon.includes("phone"))
+            return String.fromCodePoint(0xF011C);
+        if (icon.includes("computer"))
+            return iDesktop;
+        return iBluetooth;
+    }
 }

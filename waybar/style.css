@@ -1,197 +1,114 @@
-* {
-    min-height: 0px;
-    border: none;
-    border-radius: 1px;
-    font-family: SF Pro;
-    font-size: 12px;
+/* macOS-style menu bar: full width and translucent (Hyprland blurs what's behind it), items without
+   boxes that get a rounded highlight on hover. Colors come from colors.css, which follows
+   System Settings → Appearance (see colors-dark.css and colors-light.css). */
+@import "colors.css";
 
+* {
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    font-family: "SF Pro Text", "SF Pro", "FiraCode Nerd Font";
+    font-size: 13px;
+    font-weight: 500;
 }
 
-
 window#waybar {
-    background-color: rgb(0, 0, 0);
-    border-bottom: 0px solid rgba(191, 199, 202, 0.5);
-    color: #ffffff;
+    background-color: @bar_bg;
+    color: @fg;
     transition-property: background-color;
-    transition-duration: .5s;
-    border-radius: 0px;
+    transition-duration: 0.3s;
 }
 
 window#waybar.hidden {
-    opacity: 0;
+    opacity: 0.2;
 }
 
-window#waybar.empty #window {
-    background: none;
+tooltip {
+    background-color: @tooltip_bg;
+    border: 1px solid @border;
+    border-radius: 8px;
 }
 
-#workspaces button {
-    padding: 2px 10px;
-    margin-right: 5px;
-    background-color: transparent;
-    color: #969696;
-    box-shadow: inset 0px -0px transparent;
-    border-radius: 0px;
+tooltip label {
+    color: @fg;
+    padding: 2px 4px;
 }
 
-#workspaces button:hover {
-    padding: 2px 10px;
-    margin-right: 5px;
-    background: rgb(7, 54, 66);
-    color: #ffffff;
-    box-shadow: inset 0px -0px #ffffff;
-    outline-style: none;
-    text-shadow: none;
-	border-radius: 1px;
-}
+/* ---- Items ---- */
 
-#workspaces button.active {
-    padding: 2px 10px;
-    margin-right: 5px;
-    background-color: #191919;
-    color: #fffff0;
-    box-shadow: inset 0px -0px #000000;
-    outline-style: none;
-    text-shadow: none;
-}
-
-#workspaces button.urgent {
-    padding: 2px 10px;
-    margin-right: 5px;
-    background-color: #dc322f;
-    color: #ffffff;
-    outline-style: none;
-    text-shadow: none;
-}
-
-#battery,
+#custom-power,
+#custom-app,
+#submap,
+#tray,
+#custom-spotify,
+#mpd,
+#custom-keyboard,
 #custom-system,
-#backlight,
+#bluetooth,
 #network,
 #pulseaudio,
-#custom-media,
-#tray,
-#submap,
-#custom-date,
-#custom-power,
+#backlight,
+#battery,
 #custom-notifications,
-#custom-spotify,
-#window,
-#mpd,
-#custom-profile,
-#idle_inhibitor,
-#idle_inhibitor.activated{
-    padding: 2px 5px;
-    margin: 2px 2px;
-    color: #ffffff;
-    background-color: #000;
-    border-radius: 2px;
+#custom-date {
+    padding: 0 9px;
+    margin: 3px 1px;
+    border-radius: 6px;
+    color: @fg;
+    background-color: transparent;
+    transition-property: background-color;
+    transition-duration: 120ms;
 }
 
-#custom-spotify {
-	background-color: #1DB954;
+/* Everything that opens a panel or does something on click */
+#custom-power:hover,
+#custom-spotify:hover,
+#mpd:hover,
+#custom-keyboard:hover,
+#custom-system:hover,
+#bluetooth:hover,
+#network:hover,
+#pulseaudio:hover,
+#backlight:hover,
+#battery:hover,
+#custom-notifications:hover,
+#custom-date:hover {
+    background-color: @hover;
 }
 
-#custom-profile {
-	background-color: #282828;
+/* Icon-only items get a slightly larger glyph */
+#custom-power,
+#custom-system,
+#bluetooth,
+#network,
+#pulseaudio,
+#backlight,
+#custom-notifications {
+    font-size: 15px;
+}
+
+#custom-power {
+    margin-left: 6px;
+    padding: 0 12px 0 10px;
+}
+
+#custom-app {
+    padding-left: 4px;
+    font-weight: 700;
 }
 
 #submap {
-    background-color: #dc322f;
+    background-color: @red;
     color: #ffffff;
 }
 
-
-#window {
-    border-radius: 2px;
-    background-color: #000;
-    font-family: FiraCode;
-    font-size: 16px;
-    font-weight: normal;
-    margin: 0px 5px;
-}
-
-.modules-left > widget:first-child > #workspaces {
-    margin-left: 0;
-}
-
-.modules-right > widget:last-child > #workspaces {
-    margin-right: 0;
-}
-
-#battery.charging {
-    background-color: #1DB954;
-    color: #ffffff;
-}
-
-@keyframes blink {
-    to {
-        background-color: #ffffff;
-        color: #eee8d5;
-    }
-}
-
-#battery.critical:not(.charging) {
-    background-color: #dc322f;
-    color: #ffffff;
-    animation-name: blink;
-    animation-duration: 0.5s;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-direction: alternate;
-}
-
-label:focus {
-    background-color: #969696;
-}
-
-#network.disconnected {
-    color: #ffffff;
-    background-color: #dc322f;
-}
-
-#pulseaudio {
-}
-
-#pulseaudio.muted {
-    color: #586e75;
-}
-
-#temperature.critical {
-    color: #ffffff;
-    background-color: #dc322f;
-}
-
-#mpd.stopped {
-    color: #969696;
-}
-
-#taskbar button
-{
-    padding: 0px 7px;
-    margin: 4px 5px;
-    color: #ffffff;
-    background-color: #002B36;
-    border-radius: 5px;
-}
-
-#taskbar button.active {
-    padding: 0px 7px;
-    margin: 4px 5px;
-    color: #ffffff;
-    background-color: #073642;
-    border-radius: 5px;
-}
-#taskbar button:hover {
-    background: rgba(90, 90, 90, 1.0);
-    box-shadow: inset 0px -0px #000000;
-    outline-style: none;
-    text-shadow: none;
-    color: rgba(90, 90, 90, 1.0);
+#custom-date {
+    margin-right: 6px;
+    padding: 0 10px;
 }
 
 #tray {
-    background-color: #000;
+    padding: 0 10px;
 }
 
 #tray > .passive {
@@ -200,9 +117,105 @@ label:focus {
 
 #tray > .needs-attention {
     -gtk-icon-effect: highlight;
-    background-color: #dc322f;
+}
+
+/* ---- Workspaces: dots, the active one a wider pill ---- */
+
+#workspaces {
+    margin: 0;
+    padding: 0;
+}
+
+#workspaces button {
+    min-width: 8px;
+    min-height: 8px;
+    padding: 0;
+    margin: 10px 3px;
+    border-radius: 4px;
+    background-color: @dot;
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    transition-property: min-width, background-color;
+    transition-duration: 200ms;
+}
+
+/* The label is empty; at 1px it no longer stretches the dot to a line of text */
+#workspaces button label {
+    padding: 0;
+    font-size: 1px;
+}
+
+#workspaces button:hover {
+    background-color: @fg_dim;
+}
+
+#workspaces button.active {
+    min-width: 22px;
+    background-color: @fg;
+}
+
+#workspaces button.urgent {
+    background-color: @red;
+}
+
+/* ---- States ---- */
+
+#battery.warning:not(.charging) {
+    color: @orange;
+}
+
+#battery.critical:not(.charging) {
+    color: @red;
+}
+
+#custom-system.high {
+    color: @orange;
+}
+
+#pulseaudio.muted,
+#network.disconnected,
+#network.linked,
+#bluetooth.off,
+#bluetooth.disabled {
+    color: @fg_dim;
 }
 
 #custom-notifications.dnd {
-    background-color: #5e5ce6;
+    color: @indigo;
+}
+
+/* Keyboard layout: a small outlined tag, like macOS's input menu */
+#custom-keyboard {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 4px;
+    margin: 7px 5px;
+    border: 1.5px solid @fg;
+    border-radius: 4px;
+}
+
+/* Privacy: an orange pill while the microphone is recording, purple while the screen is shared */
+#privacy {
+    margin: 0 4px;
+    padding: 0;
+}
+
+#privacy-item {
+    padding: 0 5px;
+    margin: 7px 1px;
+    border-radius: 7px;
+    color: #ffffff;
+}
+
+#privacy-item.audio-in {
+    background-color: @orange;
+}
+
+#privacy-item.screenshare {
+    background-color: @purple;
+}
+
+#privacy-item.audio-out {
+    background-color: @blue;
 }

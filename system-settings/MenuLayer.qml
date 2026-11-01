@@ -91,7 +91,7 @@ Item {
                     text: Ui.labelOf(entry.modelData)
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fontSize(13)
                 }
 
                 MouseArea {

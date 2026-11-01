@@ -7,7 +7,7 @@ waybar and Hyprland.
 - Sidebar with search (Ctrl+F), your picture and name at the top; back button and Esc for pages
 - **Wi-Fi**, **Network** (Ethernet), **Sound** and **Battery**: the waybar panels, full size
 - **Bluetooth**: on/off, your devices (connect, disconnect, forget, battery), nearby devices to pair.
-  While the pane is open `bt-agent.py` is the pairing agent, so codes to confirm, PINs to type and
+  While the pane is open `bt-agent.py` (in the shared folder, via `BluetoothPairing.qml`) is the pairing agent, so codes to confirm, PINs to type and
   passkeys to enter on a keyboard show up as sheets
 - **Sound Effects**: alert sound for notifications (six built-in sounds from `make-sounds.py`, plus
   anything in `~/.local/share/sounds`) and alert volume
@@ -18,7 +18,8 @@ waybar and Hyprland.
   the menu bar's calendars), Login Items (apps and commands started with Hyprland)
 - **Appearance**: Light / Dark / Auto for GTK and libadwaita apps (Auto: light 7:00–19:00, switched by the
   Dock's shell), GTK theme, icon theme (also the Dock's and notifications'), cursor theme and size
-- **Control Center**: which waybar modules show, and the clock (date, weekday, 24-hour, seconds)
+- **Control Center**: which waybar modules show, and the clock (date, weekday, 24-hour, seconds), formatted as
+  on macOS
 - **Desktop & Dock**: Dock size, magnification, position (left, bottom, right, top), auto-hide, indicators;
   default browser, file manager, mail and terminal; floating windows, title bars, gaps, corners, borders;
   Hot Corners (lock, Notification Center, launcher, display sleep, System Settings)
@@ -54,7 +55,7 @@ changes; the rest is written out:
 | Idle, lock before sleep | `~/.config/hypr/hypridle.conf` | restarts hypridle |
 | Night Shift | `~/.config/hypr/hyprsunset.conf` | restarts hyprsunset |
 | Menu bar | `~/.config/waybar/config` (`waybar-config.py` edits only modules-right and the clock) | SIGUSR2 |
-| Appearance | gsettings, `~/.config/gtk-{3,4}.0/settings.ini` (`appearance.sh`) | — |
+| Appearance | gsettings, `~/.config/gtk-{3,4}.0/settings.ini`, the theme's GTK 4 CSS linked into `~/.config/gtk-4.0`, waybar's `colors.css` (`appearance.sh`) | Hyprland reload (title bars), waybar SIGUSR2 |
 | Icon theme of the shells | the `//@ pragma IconTheme` line of the Dock, lock screen and this app | restarts them |
 | Default apps | `xdg-mime` (`default-apps.py`) | — |
 | Calendars | `~/.config/waybar-widgets-calendars.conf` (private) | — |
@@ -63,8 +64,8 @@ Changes that need root (time zone, hostname, full name, login screen) use `sudo 
 
 ## Files
 
-- `shell.qml` window, sidebar and search; `Ui.qml` navigation and menus; `Store.qml` settings and commands
+- `shell.qml` window, sidebar and search, and `fontScale` (text size of the whole window, 1.15); `Ui.qml` navigation and menus; `Store.qml` settings and commands
 - `*Pane.qml` one per sidebar entry; `SettingsGroup`, `SettingRow`, `Dropdown`, `SettingSlider`, `Sheet`,
   `MenuLayer`, `IconTile`, `Avatar`, `GroupTitle`, `Caption` are the building blocks
 - Scripts: `about.sh`, `list-themes.sh`, `icon-preview.sh`, `appearance.sh`, `default-apps.py`,
-  `waybar-config.py`, `bt-agent.py`, `make-sounds.py`
+  `waybar-config.py`, `make-sounds.py`

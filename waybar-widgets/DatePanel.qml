@@ -181,7 +181,7 @@ Column {
             text: nav.label
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
         }
 
         MouseArea {
@@ -219,9 +219,9 @@ Column {
         Text {
             anchors.centerIn: parent
             text: dn.date.getDate()
-            color: dn.isToday ? "#ffffff" : dn.dim ? Qt.rgba(1, 1, 1, 0.2) : dn.weekend ? Theme.textSecondary : Theme.text
+            color: dn.isToday ? "#ffffff" : dn.dim ? (Theme.light ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(1, 1, 1, 0.2)) : dn.weekend ? Theme.textSecondary : Theme.text
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.fontSize(13)
             font.weight: dn.isToday ? Font.Bold : Font.Normal
             font.features: {
                 "tnum": 1
@@ -259,7 +259,7 @@ Column {
                     text: Qt.formatTime(panel.now, "h:mm AP").split(" ")[0]
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 38
+                    font.pixelSize: Theme.fontSize(38)
                     font.weight: Font.Light
                     font.features: {
                         "tnum": 1
@@ -271,7 +271,7 @@ Column {
                     text: Qt.formatTime(panel.now, "AP")
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 16
+                    font.pixelSize: Theme.fontSize(16)
                     font.weight: Font.Medium
                 }
             }
@@ -280,7 +280,7 @@ Column {
                 text: panel.locale.toString(panel.now, "dddd, MMMM d, yyyy")
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.fontSize(13)
             }
         }
     }
@@ -311,7 +311,7 @@ Column {
             text: panel.title()
             color: panel.red
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.fontSize(13)
             font.weight: Font.Bold
             font.letterSpacing: 0.4
         }
@@ -361,7 +361,7 @@ Column {
                 text: panel.locale.dayName((panel.locale.firstDayOfWeek + index) % 7, Locale.NarrowFormat)
                 color: Theme.textTertiary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
                 font.weight: Font.DemiBold
             }
         }
@@ -477,7 +477,7 @@ Column {
                 text: qsTr("all-day")
                 color: Theme.textTertiary
                 font.family: Theme.font
-                font.pixelSize: 9
+                font.pixelSize: Theme.fontSize(9)
             }
 
             Repeater {
@@ -509,7 +509,7 @@ Column {
                             text: (allDayCell.items.length > 1 ? allDayCell.items.length + " · " : "") + (allDayCell.items[0]?.title ?? "")
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 9
+                            font.pixelSize: Theme.fontSize(9)
                         }
 
                         MouseArea {
@@ -601,7 +601,7 @@ Column {
                             text: Qt.formatTime(new Date(2000, 0, 1, parent.index), "h AP")
                             color: Theme.textTertiary
                             font.family: Theme.font
-                            font.pixelSize: 9
+                            font.pixelSize: Theme.fontSize(9)
                         }
 
                         Rectangle {
@@ -630,7 +630,7 @@ Column {
 
                         Rectangle {
                             anchors.fill: parent
-                            color: dayColumn.isToday ? "#0dffffff" : "transparent"
+                            color: dayColumn.isToday ? (Theme.light ? "#0a000000" : "#0dffffff") : "transparent"
                         }
 
                         Rectangle {
@@ -672,7 +672,7 @@ Column {
                                     text: block.modelData.event.title
                                     color: Theme.text
                                     font.family: Theme.font
-                                    font.pixelSize: 9
+                                    font.pixelSize: Theme.fontSize(9)
                                     font.weight: Font.Medium
                                     lineHeight: 0.95
                                 }
@@ -734,7 +734,7 @@ Column {
                 text: panel.locale.toString(panel.selected, "dddd, MMMM d")
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.fontSize(13)
                 font.weight: Font.DemiBold
             }
 
@@ -742,7 +742,7 @@ Column {
                 text: qsTr("Week %1  ·  Day %2").arg(panel.weekNumber(panel.selected)).arg(panel.dayOfYear(panel.selected))
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
 
@@ -762,7 +762,7 @@ Column {
                 text: panel.relative(panel.selected)
                 color: panel.sameDay(panel.selected, panel.today) ? panel.red : Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
                 font.weight: Font.Medium
             }
         }
@@ -800,7 +800,7 @@ Column {
                     text: eventRow.modelData.title
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fontSize(13)
                 }
 
                 Text {
@@ -809,7 +809,7 @@ Column {
                     text: [panel.cals.timeRange(eventRow.modelData), eventRow.modelData.location].filter(x => x).join("  ·  ")
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
         }
@@ -823,7 +823,7 @@ Column {
         text: qsTr("%n more event(s)", "", panel.selectedEvents.length - 6)
         color: Theme.textTertiary
         font.family: Theme.font
-        font.pixelSize: 11
+        font.pixelSize: Theme.fontSize(11)
     }
 
     Text {
@@ -837,7 +837,7 @@ Column {
               : qsTr("No Events")
         color: Theme.textTertiary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     Repeater {
@@ -852,7 +852,7 @@ Column {
             text: qsTr("Couldn't load %1").arg(modelData.name)
             color: Theme.danger
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fontSize(11)
         }
     }
 }

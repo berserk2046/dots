@@ -38,7 +38,7 @@ Column {
             text: parent.text
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fontSize(11)
             font.features: {
                 "tnum": 1
             }
@@ -48,7 +48,7 @@ Column {
     component Value: Text {
         color: Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         font.features: {
             "tnum": 1
         }
@@ -72,7 +72,7 @@ Column {
                 text: qsTr("System")
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 14
+                font.pixelSize: Theme.fontSize(14)
                 font.weight: Font.Bold
             }
 
@@ -83,7 +83,7 @@ Column {
                       .filter(x => x).join("  ·  ")
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
     }
@@ -129,7 +129,7 @@ Column {
                 const slots = panel.sys.historyLength - 1;
                 const step = width / slots;
                 // Grid lines at 25 / 50 / 75 %.
-                ctx.strokeStyle = "rgba(255,255,255,0.06)";
+                ctx.strokeStyle = Theme.light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)";
                 ctx.lineWidth = 1;
                 for (let g = 1; g < 4; g++) {
                     const y = Math.round(height * g / 4) + 0.5;
@@ -181,7 +181,7 @@ Column {
             text: qsTr("Measuring…")
             color: Theme.textTertiary
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.fontSize(11)
         }
     }
 
@@ -213,7 +213,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             visible: panel.sys.temperature > 0
             text: Math.round(panel.sys.temperature) + " °C"
-            font.pixelSize: 11
+            font.pixelSize: Theme.fontSize(11)
         }
     }
 
@@ -298,7 +298,7 @@ Column {
                 text: qsTr("Used %1").arg(panel.sys.memory(panel.sys.memUsed))
             }
             Legend {
-                dot: "#59ffffff"
+                dot: Theme.textTertiary
                 text: qsTr("Cached %1").arg(panel.sys.memory(panel.sys.memCached))
             }
         }
@@ -348,7 +348,7 @@ Column {
                     text: disk.modelData.model || disk.modelData.device.replace("/dev/", "")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fontSize(13)
                     font.weight: Font.DemiBold
                 }
 
@@ -360,7 +360,7 @@ Column {
                     text: disk.modelData.mount + "  ·  " + disk.modelData.fstype
                     color: Theme.textTertiary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
 
@@ -380,14 +380,14 @@ Column {
                     text: qsTr("%1 available of %2").arg(panel.sys.bytes(disk.modelData.avail)).arg(panel.sys.bytes(disk.modelData.size))
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fontSize(12)
                 }
 
                 Value {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: qsTr("%1 used").arg(panel.percent(disk.ratio))
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
         }

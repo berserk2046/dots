@@ -7,7 +7,7 @@ Rectangle {
     property real value: 0 // 0..1, first segment
     property real secondary: 0 // 0..1, stacked after the first
     property color barColor: Theme.accent
-    property color secondaryColor: "#59ffffff"
+    property color secondaryColor: Theme.textTertiary
 
     width: parent?.width ?? 0
     implicitHeight: 8

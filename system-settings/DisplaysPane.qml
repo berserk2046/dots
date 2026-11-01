@@ -222,7 +222,7 @@ Column {
                         text: tile.modelData.output
                         color: "#ffffff"
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                         font.weight: Font.DemiBold
                     }
 
@@ -504,7 +504,7 @@ Column {
             text: qsTr("Keep these display settings?")
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 15
+            font.pixelSize: Theme.fontSize(15)
             font.weight: Font.DemiBold
         }
 
@@ -514,7 +514,7 @@ Column {
             text: (pane.countdown === 1 ? qsTr("Reverting to the previous settings in 1 second.") : qsTr("Reverting to the previous settings in %1 seconds.").arg(pane.countdown))
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
         }
 
         Row {
@@ -645,7 +645,7 @@ Column {
                 text: (pane.night.temperature ?? 4500) + " K"
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.fontSize(12)
             }
         }
     }

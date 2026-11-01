@@ -150,7 +150,7 @@ Item {
         anchors.fill: parent
         anchors.margins: -3
         radius: 12
-        color: "#40ffffff"
+        color: DockTheme.dropHighlight
         visible: dropArea.containsDrag && item.acceptsDrag
     }
 
@@ -163,9 +163,15 @@ Item {
             y: item.edge === "top" ? item.hop : item.edge === "bottom" ? -item.hop : 0
         }
 
-        IconImage {
+        // Plain Image with a fixed sourceSize: IconImage ties sourceSize to its current size, so
+        // every magnification step reloaded the icon (asynchronously, blank meanwhile) and it blinked.
+        Image {
             anchors.fill: parent
-            implicitSize: 128 // render resolution; scaled down to the current size
+            sourceSize.width: 128 // render resolution; scaled down to the current size
+            sourceSize.height: 128
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
             source: item.iconSource
             asynchronous: true
         }
@@ -265,7 +271,7 @@ Item {
         height: 4
         radius: 2
         visible: item.running && item.showIndicator
-        color: item.focused ? "#ffffff" : "#88ffffff"
+        color: item.focused ? DockTheme.indicator : DockTheme.indicatorDim
     }
 
     // Name label, on the inner side of the icon.
@@ -275,7 +281,7 @@ Item {
         width: label.implicitWidth + 16
         height: label.implicitHeight + 8
         radius: 6
-        color: "#f012121a"
+        color: DockTheme.menu
         visible: item.showLabel && (mouse.containsMouse || dropArea.containsDrag)
 
         Text {
@@ -283,7 +289,7 @@ Item {
 
             anchors.centerIn: parent
             text: item.entry?.name || item.app.id
-            color: "#ffffff"
+            color: DockTheme.text
             font.family: "SF Pro"
             font.pixelSize: 12
         }

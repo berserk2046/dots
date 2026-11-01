@@ -61,7 +61,7 @@ Rectangle {
                 text: row.title
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.fontSize(13)
                 font.weight: row.bold ? Font.DemiBold : Font.Normal
             }
 
@@ -72,7 +72,7 @@ Rectangle {
                 text: row.subtitle
                 color: Theme.textSecondary
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.fontSize(11)
             }
         }
 

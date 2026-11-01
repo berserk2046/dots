@@ -56,13 +56,19 @@ Item {
         anchors.fill: parent
         anchors.margins: -3
         radius: 12
-        color: "#40ffffff"
+        color: DockTheme.dropHighlight
         visible: dropArea.containsDrag
     }
 
-    IconImage {
+    // Plain Image with a fixed sourceSize: IconImage ties sourceSize to its current size, so
+    // every magnification step reloaded the icon (asynchronously, blank meanwhile) and it blinked.
+    Image {
         anchors.fill: parent
-        implicitSize: 128
+        sourceSize.width: 128 // render resolution; scaled down to the current size
+        sourceSize.height: 128
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        mipmap: true
         source: trash.iconSource
         asynchronous: true
     }
@@ -74,7 +80,7 @@ Item {
         width: label.implicitWidth + 16
         height: label.implicitHeight + 8
         radius: 6
-        color: "#f012121a"
+        color: DockTheme.menu
         visible: trash.showLabel && (mouse.containsMouse || dropArea.containsDrag)
 
         Text {
@@ -82,7 +88,7 @@ Item {
 
             anchors.centerIn: parent
             text: qsTr("Trash")
-            color: "#ffffff"
+            color: DockTheme.text
             font.family: "SF Pro"
             font.pixelSize: 12
         }

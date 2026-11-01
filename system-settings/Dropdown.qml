@@ -17,7 +17,10 @@ Rectangle {
     implicitHeight: 24
     radius: 6
     opacity: enabled ? 1 : 0.4
-    color: mouse.pressed ? "#40ffffff" : mouse.containsMouse ? "#33ffffff" : "#26ffffff"
+    color: Theme.light ? (mouse.pressed ? Theme.solidCardHover : mouse.containsMouse ? Theme.buttonHover : Theme.button)
+                       : (mouse.pressed ? "#40ffffff" : mouse.containsMouse ? "#33ffffff" : "#26ffffff")
+    border.width: 1
+    border.color: Theme.buttonBorder
 
     Text {
         id: label
@@ -31,7 +34,7 @@ Rectangle {
         text: dropdown.currentIndex >= 0 ? Ui.labelOf(dropdown.options[dropdown.currentIndex]) : dropdown.placeholder
         color: dropdown.currentIndex >= 0 ? Theme.text : Theme.textSecondary
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
     }
 
     Column {

@@ -24,5 +24,6 @@ Rectangle {
         visible: circle.glyph !== ""
         text: circle.glyph
         size: 15
+        color: circle.active ? "#ffffff" : Theme.text
     }
 }

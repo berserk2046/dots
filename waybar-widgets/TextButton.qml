@@ -14,16 +14,18 @@ Rectangle {
     radius: 7
     opacity: enabled ? 1 : 0.4
     color: primary ? (mouse.pressed ? Qt.darker(Theme.accent, 1.2) : Theme.accent)
-                   : (mouse.pressed ? Theme.pressed : mouse.containsMouse ? "#29ffffff" : "#1fffffff")
+                   : (mouse.pressed ? Theme.pressed : mouse.containsMouse ? Theme.buttonHover : Theme.button)
+    border.width: primary ? 0 : 1
+    border.color: Theme.buttonBorder
 
     Text {
         id: label
 
         anchors.centerIn: parent
         text: button.text
-        color: button.destructive ? Theme.danger : Theme.text
+        color: button.destructive ? Theme.danger : button.primary ? "#ffffff" : Theme.text
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.fontSize(12)
         font.weight: button.primary ? Font.DemiBold : Font.Normal
     }
 

@@ -49,7 +49,7 @@ Item {
         text: row.name
         color: Theme.text
         font.family: Theme.font
-        font.pixelSize: 13
+        font.pixelSize: Theme.fontSize(13)
     }
 
     Row {
@@ -65,7 +65,7 @@ Item {
             text: row.detail
             color: Theme.textTertiary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
             font.features: {
                 "tnum": 1
             }
@@ -75,7 +75,7 @@ Item {
             text: row.value
             color: Theme.textSecondary
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.fontSize(12)
             font.features: {
                 "tnum": 1
             }

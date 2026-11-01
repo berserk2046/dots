@@ -87,7 +87,7 @@ Column {
                     text: pane.fileName(pane.current)
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fontSize(15)
                     font.weight: Font.DemiBold
                 }
 
@@ -99,7 +99,7 @@ Column {
                         text: qsTr("Fit")
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
 
                     Dropdown {
@@ -134,7 +134,7 @@ Column {
                         text: qsTr("Show on")
                         color: Theme.textSecondary
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fontSize(12)
                     }
 
                     Dropdown {
@@ -160,7 +160,7 @@ Column {
                                                                    : qsTr("Also shown on the lock screen.")
                     color: Theme.textSecondary
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fontSize(11)
                 }
             }
         }
@@ -216,7 +216,7 @@ Column {
                         width: (pane.width - 30) / 4
                         height: width * 0.625
                         radius: 7
-                        color: "#1c1c1e"
+                        color: Theme.solidCard
                         border.width: isCurrent ? 3 : 0
                         border.color: Theme.accent
 
@@ -233,7 +233,7 @@ Column {
                         Rectangle {
                             anchors.fill: parent
                             radius: parent.radius
-                            color: thumbMouse.containsMouse ? "#26ffffff" : "transparent"
+                            color: thumbMouse.containsMouse ? Theme.hover : "transparent"
                         }
 
                         MouseArea {

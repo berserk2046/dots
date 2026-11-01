@@ -232,7 +232,7 @@ Column {
                             text: pane.keyName(bindRow.modelData)
                             color: Theme.textSecondary
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.fontSize(12)
                         }
                     }
                 }

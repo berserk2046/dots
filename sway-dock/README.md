@@ -48,5 +48,5 @@ changes apply right away.
 - Spacing, padding and the defaults for size and magnification: properties at the top of `Dock.qml`.
 - Icon theme: System Settings → Appearance, which rewrites the `//@ pragma IconTheme` line in `shell.qml`
   (default `MacTahoe-dark`) and restarts the Dock.
-- Colors: `background` in `Dock.qml` and the tooltip/dot in `DockItem.qml`.
+- Colors: `DockTheme.qml`, light or dark following System Settings → Appearance (the color scheme).
 - Font: `font.family` on the labels in `Dock.qml`, `DockItem.qml` and `TrashItem.qml` (default `SF Pro`).

@@ -12,7 +12,7 @@ Rectangle {
     radius: 10
     color: Theme.solidCard
     border.width: 1
-    border.color: "#0fffffff"
+    border.color: Theme.light ? "#14000000" : "#0fffffff"
     clip: true
 
     Column {

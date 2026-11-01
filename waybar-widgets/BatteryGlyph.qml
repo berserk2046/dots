@@ -21,7 +21,7 @@ Item {
         radius: height * 0.28
         color: "transparent"
         border.width: Math.max(1, height * 0.08)
-        border.color: Qt.rgba(1, 1, 1, 0.45)
+        border.color: Theme.light ? Qt.rgba(0, 0, 0, 0.4) : Qt.rgba(1, 1, 1, 0.45)
 
         Rectangle {
             readonly property real inset: body.border.width + Math.max(1, body.height * 0.08)
@@ -79,6 +79,6 @@ Item {
         width: Math.max(1.5, parent.height * 0.12)
         height: parent.height * 0.36
         radius: width / 2
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: Theme.light ? Qt.rgba(0, 0, 0, 0.4) : Qt.rgba(1, 1, 1, 0.45)
     }
 }
