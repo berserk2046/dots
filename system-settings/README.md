@@ -22,6 +22,7 @@ waybar and Hyprland.
   on macOS
 - **Desktop & Dock**: Dock size, magnification, position (left, bottom, right, top), auto-hide, indicators;
   default browser, file manager, mail and terminal; floating windows, title bars, gaps, corners, borders;
+  the window switcher (Alt+Tab: previews or icons, all workspaces or the current one);
   Hot Corners (lock, Notification Center, launcher, display sleep, System Settings)
 - **Displays**: drag displays to arrange them, resolution, refresh rate, scale, rotation, mirroring, main
   display; changes revert after 15 seconds unless kept. Brightness, and Night Shift (hyprsunset) on a
@@ -45,7 +46,7 @@ running app on its pinned icon.
 
 ## Where settings go
 
-Everything is kept in `settings.json` here. The Dock and the lock screen read it directly and follow
+Everything is kept in `settings.json` here. The Dock, the lock screen and the window switcher read it directly and follow
 changes; the rest is written out:
 
 | What | File | Applied with |
@@ -56,7 +57,7 @@ changes; the rest is written out:
 | Night Shift | `~/.config/hypr/hyprsunset.conf` | restarts hyprsunset |
 | Menu bar | `~/.config/waybar/config` (`waybar-config.py` edits only modules-right and the clock) | SIGUSR2 |
 | Appearance | gsettings, `~/.config/gtk-{3,4}.0/settings.ini`, the theme's GTK 4 CSS linked into `~/.config/gtk-4.0`, waybar's `colors.css` (`appearance.sh`) | Hyprland reload (title bars), waybar SIGUSR2 |
-| Icon theme of the shells | the `//@ pragma IconTheme` line of the Dock, lock screen and this app | restarts them |
+| Icon theme of the shells | the `//@ pragma IconTheme` line of the Dock, lock screen, window switcher and this app | restarts them |
 | Default apps | `xdg-mime` (`default-apps.py`) | — |
 | Calendars | `~/.config/waybar-widgets-calendars.conf` (private) | — |
 

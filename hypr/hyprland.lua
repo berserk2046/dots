@@ -75,6 +75,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
     hl.exec_cmd("qs -p ~/.config/sway-dock")
+    -- Window switcher (Alt+Tab)
+    hl.exec_cmd("qs -p ~/.config/app-switcher")
     -- Lock screen and notifications
     hl.exec_cmd("qs -p ~/.config/lockscreen")
     -- Load plugins enabled with hyprpm (hyprbars)
@@ -297,6 +299,78 @@ hl.bind(mod .. " + CTRL + q", hl.dsp.exec_cmd("qs -p ~/.config/lockscreen ipc ca
 -- Notification Center
 hl.bind(mod .. " + n", hl.dsp.exec_cmd("qs -p ~/.config/lockscreen ipc call notifications toggle"), { description = "Show the Notification Center" })
 
+-- Window switcher (Alt+Tab), drawn by ~/.config/app-switcher (Quickshell). Hold Alt and press Tab
+-- (Shift+Tab, the arrows or hjkl) to pick a window; let go of Alt to switch to it. While it's open,
+-- Esc cancels, Return switches and Q closes the selected window. Its keys live in the "App Switcher"
+-- submap (the name waybar shows), so the focused app never sees them, and reach the switcher as global
+-- shortcuts.
+do
+    local submap = "App Switcher"
+
+    local function send(action)
+        hl.dispatch(hl.dsp.global("app-switcher:" .. action))
+    end
+
+    local function altDown()
+        return hl.is_key_down("Alt_L") or hl.is_key_down("Alt_R")
+    end
+
+    -- Letting go of Alt switches. Checked every few milliseconds while the switcher is open. (Not a
+    -- release bind: a global sent from a key release reaches the switcher as "released", which it
+    -- ignores, so the panel would stay open.)
+    local watch = nil
+
+    local function finish(action)
+        if watch ~= nil then
+            watch:set_enabled(false)
+        end
+        if hl.get_current_submap() == submap then
+            hl.dispatch(hl.dsp.submap("reset"))
+        end
+        send(action)
+    end
+
+    local function open(action)
+        send(action)
+        if hl.get_current_submap() ~= submap then
+            hl.dispatch(hl.dsp.submap(submap))
+        end
+        -- Always watched, even when Alt is already up again (a very fast Alt+Tab): then the next
+        -- check switches right away
+        if watch == nil then
+            watch = hl.timer(function()
+                if not altDown() then
+                    finish("commit")
+                end
+            end, { timeout = 15, type = "repeat" })
+        else
+            watch:set_enabled(true)
+        end
+    end
+
+    hl.bind("ALT + Tab",         function() open("next") end,     { description = "Switch windows" })
+    hl.bind("ALT + SHIFT + Tab", function() open("previous") end, { description = "Switch windows, backwards" })
+
+    hl.define_submap(submap, function()
+        local moves = {
+            { "Tab",         "next"     },
+            { "SHIFT + Tab", "previous" },
+            { "left",  "left"  }, { left,  "left"  },
+            { "right", "right" }, { right, "right" },
+            { "up",    "up"    }, { up,    "up"    },
+            { "down",  "down"  }, { down,  "down"  },
+        }
+        for _, m in ipairs(moves) do
+            local action = m[2]
+            hl.bind("ALT + " .. m[1], function() send(action) end, { repeating = true, description = "Window switcher: " .. action })
+        end
+        hl.bind("ALT + q",      function() send("close") end,     { description = "Window switcher: close the window" })
+        hl.bind("ALT + Return", function() finish("commit") end,  { description = "Window switcher: switch" })
+        hl.bind("ALT + Escape", function() finish("cancel") end,  { description = "Window switcher: cancel" })
+        hl.bind("Escape",       function() finish("cancel") end,  { description = "Window switcher: cancel" })
+    end)
+end
+
 -- Drag windows with $mod + left mouse, resize with $mod + right mouse
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true, description = "Move a window with the mouse" })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "Resize a window with the mouse" })
@@ -392,7 +466,11 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { loc
 hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+"), { locked = true, repeating =true, description = "Brightness up" })
 
 -- Screenshot
-hl.bind("Print", hl.dsp.exec_cmd("grim"), { description = "Screenshot" })
+-- Screenshots (hyprshot): Print copies the focused display to the clipboard, $mod+Print saves it to a file
+-- (~/Pictures by default, $HYPRSHOT_DIR), $mod+Shift+S copies a region you drag out
+hl.bind("Print", hl.dsp.exec_cmd("hyprshot -m active -m output --clipboard-only"), { description = "Screenshot cbonly" })
+hl.bind(mod .. " + Print", hl.dsp.exec_cmd("hyprshot -m active -m output"), { description = "Screenshot" })
+hl.bind(mod .. " + SHIFT + s", hl.dsp.exec_cmd("hyprshot -m region --clipboard-only"), {description = "Region Screenshot cbonly" })
 
 
 --------------------------------
@@ -434,6 +512,136 @@ hl.window_rule({
 })
 
 
+-- Floating windows reopen at the size you last gave them, like on macOS.
+-- Resize a floating window and close it: that size is saved for the app. Next time the app opens
+-- floating, or you float it with $mod+SHIFT+space, it gets that size back, centered.
+-- Dialogs are left alone: only an app's first window, or one you float yourself, is restored or saved.
+-- Saved in ~/.local/state/hypr-float-sizes.tsv; delete the file to forget every size.
+do
+    local stateDir = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+    local path     = stateDir .. "/hypr-float-sizes.tsv"
+    local maxSaved = 100   -- the least recently used apps are forgotten past this
+    local minSide  = 150   -- don't remember anything smaller than this
+
+    -- Lines of "width<TAB>height<TAB>app class", most recently used first. Read as plain data:
+    -- window classes come from apps, so this file is never run as code.
+    local saved, order = {}, {}
+    local f = io.open(path, "r")
+    if f then
+        for line in f:lines() do
+            local w, h, class = line:match("^(%d+)\t(%d+)\t([^%c]+)$")
+            if class and not saved[class] and #order < maxSaved then
+                saved[class] = { tonumber(w), tonumber(h) }
+                order[#order + 1] = class
+            end
+        end
+        f:close()
+    end
+
+    local function save()
+        local tmp = path .. ".tmp"
+        local out = io.open(tmp, "w")
+        if not out then
+            return
+        end
+        for _, class in ipairs(order) do
+            out:write(saved[class][1], "\t", saved[class][2], "\t", class, "\n")
+        end
+        out:close()
+        os.rename(tmp, path)
+    end
+
+    -- Windows this applies to, by address: { base = size it had once floating, to tell if you resized it }
+    local tracked = {}
+
+    local function classOf(win)
+        local class = win.initial_class
+        if class == "" or class:find("%c") then
+            return nil
+        end
+        return class
+    end
+
+    local function onFloat(win)
+        local t = tracked[win.address]
+        if t == nil or t.base or win.fullscreen ~= 0 then
+            return -- floated before this session: Hyprland keeps its own size and position
+        end
+        local size = saved[classOf(win) or ""]
+        if size then
+            -- Never larger than the screen
+            local w, h = size[1], size[2]
+            local mon = win.monitor
+            if mon then
+                local scale = mon.scale or 1
+                w = math.min(w, math.floor(mon.width / scale))
+                h = math.min(h, math.floor(mon.height / scale))
+            end
+            local target = "address:" .. win.address
+            hl.dispatch(hl.dsp.window.resize({ x = w, y = h, window = target }))
+            hl.dispatch(hl.dsp.window.center({ window = target }))
+            t.base = { w, h }
+        else
+            t.base = { win.size.x, win.size.y }
+        end
+    end
+
+    hl.on("window.open", function(win)
+        local class = win and classOf(win)
+        if class == nil then
+            return
+        end
+        -- Only the app's first window; later ones are usually its dialogs
+        for _, other in ipairs(hl.get_windows()) do
+            if other.address ~= win.address and other.initial_class == class then
+                return
+            end
+        end
+        tracked[win.address] = {}
+        if win.floating then
+            onFloat(win)
+        end
+    end)
+
+    hl.on("window.update_state", function(win, changes)
+        if win and changes and changes.float == true and classOf(win) then
+            -- Floating a window yourself always counts
+            tracked[win.address] = tracked[win.address] or {}
+            onFloat(win)
+        end
+    end)
+
+    hl.on("window.close", function(win)
+        if win == nil then
+            return
+        end
+        local t = tracked[win.address]
+        tracked[win.address] = nil
+        local class = classOf(win)
+        if t == nil or t.base == nil or class == nil or not win.floating or win.fullscreen ~= 0 then
+            return
+        end
+        local w, h = math.floor(win.size.x), math.floor(win.size.y)
+        -- Only sizes you chose: skip windows you never resized
+        if w < minSide or h < minSide or (math.abs(w - t.base[1]) < 4 and math.abs(h - t.base[2]) < 4) then
+            return
+        end
+        for i, c in ipairs(order) do
+            if c == class then
+                table.remove(order, i)
+                break
+            end
+        end
+        table.insert(order, 1, class)
+        saved[class] = { w, h }
+        while #order > maxSaved do
+            saved[table.remove(order)] = nil
+        end
+        save()
+    end)
+end
+
+
 -- The menu bar is translucent, like macOS's: blur what's behind it
 hl.layer_rule({
     name  = "waybar-blur",
@@ -450,6 +658,16 @@ hl.layer_rule({
 
     blur         = true,
     ignore_alpha = 0.3,
+})
+
+-- The window switcher (Alt+Tab) is frosted glass too. It animates itself, so Hyprland doesn't.
+hl.layer_rule({
+    name  = "app-switcher-blur",
+    match = { namespace = "^app-switcher$" },
+
+    blur         = true,
+    ignore_alpha = 0.3,
+    no_anim      = true,
 })
 
 

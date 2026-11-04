@@ -271,17 +271,14 @@ Singleton {
         run(["sh", script("appearance.sh"), ...args], callback);
     }
 
-    // GTK, the Dock, the lock screen (notification icons) and this app; Quickshell reads its icon
-    // theme from the `//@ pragma IconTheme` line at startup, so the Dock and lock screen restart.
+    // GTK, the Dock, the lock screen (notification icons), the window switcher and this app; Quickshell
+    // reads its icon theme from the `//@ pragma IconTheme` line at startup, so the other shells restart.
     function setIconTheme(name) {
         set("appearance", "iconTheme", name);
         appearance(["icons", name]);
-        const shells = [home + "/.config/sway-dock", lockscreenDir, dir];
-        run(["sh", "-c", 'theme=$1; shift; for f; do sed -i "s|^//@ pragma IconTheme .*|//@ pragma IconTheme $theme|" "$f/shell.qml"; done',
-             "sh", name, ...shells], () => {
-            restartShell(shells[0]);
-            restartShell(shells[1]);
-        });
+        const restarted = [home + "/.config/sway-dock", lockscreenDir, home + "/.config/app-switcher"];
+        run(["sh", "-c", 'theme=$1; shift; for f; do [ -f "$f/shell.qml" ] && sed -i "s|^//@ pragma IconTheme .*|//@ pragma IconTheme $theme|" "$f/shell.qml"; done; true',
+             "sh", name, ...restarted, dir], () => restarted.forEach(folder => restartShell(folder)));
     }
 
     // ---- Wallpaper: hyprpaper ----

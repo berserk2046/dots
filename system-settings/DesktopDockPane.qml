@@ -3,7 +3,7 @@ import Quickshell
 import qs.shared
 
 // Desktop & Dock: the Dock (size, magnification, position, auto-hide, indicators), default apps,
-// windows (floating, title bars, gaps, corners) and Hot Corners (own page).
+// windows (floating, title bars, gaps, corners), the window switcher (Alt+Tab) and Hot Corners (own page).
 Column {
     id: pane
 
@@ -240,6 +240,38 @@ Column {
                 options: ["0", "1", "2", "3"]
                 current: Store.get("windows", "borderSize", 1)
                 onPicked: index => pane.setWindows("borderSize", index)
+            }
+        }
+    }
+
+    GroupTitle {
+        visible: Ui.subpage === ""
+        text: qsTr("Window Switcher")
+    }
+
+    SettingsGroup {
+        visible: Ui.subpage === ""
+
+        SettingRow {
+            title: qsTr("Show window previews")
+            subtitle: qsTr("Alt+Tab; off shows large app icons, like macOS")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Store.get("switcher", "previews", true)
+                onToggled: on => Store.set("switcher", "previews", on)
+            }
+        }
+
+        SettingRow {
+            title: qsTr("Show windows from")
+
+            Segmented {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 260
+                options: [qsTr("All Workspaces"), qsTr("This Workspace")]
+                current: Store.get("switcher", "scope", "all") === "workspace" ? 1 : 0
+                onPicked: index => Store.set("switcher", "scope", ["all", "workspace"][index])
             }
         }
     }

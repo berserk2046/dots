@@ -8,7 +8,7 @@ set -eu
 
 repo=$(cd "$(dirname "$0")" && pwd)
 config=${XDG_CONFIG_HOME:-$HOME/.config}
-dirs="hypr lockscreen sway-dock waybar waybar-widgets system-settings"
+dirs="hypr lockscreen sway-dock app-switcher waybar waybar-widgets system-settings"
 stamp=$(date +%Y%m%d-%H%M%S)
 copy=false
 packages=true
@@ -23,7 +23,7 @@ done
 
 # Official repos
 pacman_pkgs="hyprland quickshell waybar hyprpaper hypridle hyprsunset
-    foot fuzzel yazi grim playerctl brightnessctl
+    foot fuzzel yazi grim hyprshot playerctl brightnessctl
     pipewire wireplumber libpulse power-profiles-daemon upower mpd mpc
     wpa_supplicant bluez bluez-utils
     python python-gobject python-dbus glib2 libnotify xdg-utils

@@ -8,6 +8,7 @@ A macOS-style Hyprland desktop for Arch Linux, built mostly with [Quickshell](ht
 | `waybar/` | Menu bar config and style |
 | `waybar-widgets/` | Control Center style dropdowns for the menu bar (Wi-Fi, sound, battery, date, power) |
 | `sway-dock/` | Dock, hot corners, automatic light/dark appearance |
+| `app-switcher/` | Window switcher (Alt+Tab), with previews or macOS-style icons |
 | `lockscreen/` | Lock screen, login screen (greetd), notification daemon and Notification Center |
 | `system-settings/` | System Settings app that writes the settings for everything above |
 
@@ -34,7 +35,7 @@ The login screen is optional: `sudo sh lockscreen/greetd/install.sh [wallpaper]`
 - **Quickshell** 0.3 or newer
 - **Wi-Fi through wpa_supplicant** (`wpa_cli`). With NetworkManager or iwd the Wi-Fi panels stay empty.
 - Packages (official repos): `hyprland quickshell waybar hyprpaper hypridle hyprsunset foot fuzzel yazi
-  grim playerctl brightnessctl pipewire wireplumber libpulse power-profiles-daemon upower mpd mpc
+  grim hyprshot playerctl brightnessctl pipewire wireplumber libpulse power-profiles-daemon upower mpd mpc
   wpa_supplicant bluez bluez-utils python python-gobject python-dbus glib2 libnotify xdg-utils
   ttf-firacode-nerd curl 7zip fontconfig`
 - AUR: `pwvucontrol`
@@ -51,6 +52,8 @@ The login screen is optional: `sudo sh lockscreen/greetd/install.sh [wallpaper]`
 - **Keyboard layouts:** `us,latam` by default (`hypr/hyprland.lua` and `lockscreen/greetd/hyprland.lua`), or set
   them in System Settings → Keyboard.
 - **Your picture** on the lock and login screens: `~/.face`.
+- **Floating window sizes:** a floating app reopens at the size you last resized it to. The sizes live in
+  `~/.local/state/hypr-float-sizes.tsv`; delete it to start over.
 - **Google Calendar** in the date panel: see `waybar-widgets/README.md`. Your calendar addresses go in
   `~/.config/waybar-widgets-calendars.conf`, which is outside this repo. Keep it private.
 
@@ -68,11 +71,15 @@ These are in `.gitignore`.
 | --- | --- |
 | Super+Return | Terminal (foot) |
 | Super+P | App launcher (fuzzel) |
+| Alt+Tab | Switch windows (hold Alt; Shift+Tab goes back, Q closes, Esc cancels) |
 | Super+I | Files (yazi) |
 | Super+Q | Close window |
 | Super+Ctrl+Q | Lock screen |
 | Super+N | Notification Center |
 | Super+U | Next keyboard layout |
+| Print | Screenshot of the focused display to the clipboard |
+| Super+Print | Screenshot of the focused display to a file (~/Pictures) |
+| Super+Shift+S | Screenshot of a region to the clipboard |
 | Super+Shift+R | Reload Hyprland |
 | Super+Shift+E | Exit Hyprland |
 
