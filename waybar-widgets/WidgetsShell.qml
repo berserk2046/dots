@@ -73,6 +73,17 @@ Scope {
         isOpen(name) ? close() : show(name);
     }
 
+    // Like toggle, but opens centered under a point in global coordinates (the cursor, from toggle.sh).
+    function toggleAt(name, x, y) {
+        if (isOpen(name)) {
+            close();
+            return;
+        }
+        const screen = Quickshell.screens.find(s => x >= s.x && x < s.x + s.width && y >= s.y && y < s.y + s.height)
+                       ?? focusedScreen;
+        show(name, screen, x - screen.x);
+    }
+
     // What the panels show: small, and idle unless their panel is open
     Network {
         id: network
