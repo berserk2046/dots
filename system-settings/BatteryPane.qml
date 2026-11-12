@@ -1,7 +1,7 @@
 import QtQuick
 import qs.shared
 
-// Battery: the waybar Battery panel (level, health, Energy Mode, Battery Conservation, busy apps).
+// Battery: the menu bar's Battery panel (level, health, Energy Mode, Battery Conservation, busy apps).
 Column {
     id: pane
 

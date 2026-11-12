@@ -16,7 +16,10 @@ Item {
     property string desktopImage: ""
     // Media, calendar and notifications: lock screen only (the login screen can't see them).
     property bool showPrivate: false
-    property var notifications: [] // {notification, received: Date}
+    // How many notifications arrived while locked, and from which apps (a few names; empty when
+    // previews are off). Their text stays in the Notification Center, behind the password.
+    property int notificationCount: 0
+    property var notificationApps: []
     property var nextEvent: null
     property bool doNotDisturb: false
     // While true, any key or click unlocks without a password.
@@ -90,24 +93,48 @@ Item {
         }
     }
 
-    // Caps Lock state from the keyboard LEDs, polled while the field can take input.
-    property bool capsLock: false
+    // Caps Lock state from the keyboard LEDs (one per keyboard), read while the field can take input.
+    // The LED files are found once; after that they're only read again, without starting a program.
+    property var capsLeds: []
+    property var capsStates: ({})
+    readonly property bool capsLock: Object.values(capsStates).some(v => v > 0)
 
     Process {
-        id: capsProc
-
-        command: ["sh", "-c", "cat /sys/class/leds/*::capslock/brightness 2>/dev/null"]
+        running: root.primary
+        command: ["sh", "-c", "ls /sys/class/leds/*::capslock/brightness 2>/dev/null"]
         stdout: StdioCollector {
-            onStreamFinished: root.capsLock = text.split("\n").some(v => Number(v) > 0)
+            onStreamFinished: root.capsLeds = text.split("\n").filter(p => p.startsWith("/sys/class/leds/"))
         }
     }
 
+    Instantiator {
+        model: root.capsLeds
+
+        FileView {
+            required property string modelData
+
+            path: modelData
+            printErrors: false
+            onLoaded: {
+                const next = Object.assign({}, root.capsStates);
+                next[modelData] = Number(text().trim()) || 0;
+                root.capsStates = next;
+            }
+        }
+
+        onObjectAdded: (index, object) => capsTimer.views = [...capsTimer.views, object]
+        onObjectRemoved: (index, object) => capsTimer.views = capsTimer.views.filter(v => v !== object)
+    }
+
     Timer {
+        id: capsTimer
+
+        property var views: []
+
         interval: 300
         repeat: true
-        triggeredOnStart: true
-        running: root.primary && !root.unlocking
-        onTriggered: capsProc.running = true
+        running: root.primary && !root.unlocking && views.length > 0
+        onTriggered: views.forEach(v => v.reload())
     }
 
     // The desktop as it was, uncovered by the slide-up. Only drawn while unlocking.
@@ -142,26 +169,41 @@ Item {
         }
 
         // Blurred, slightly dimmed wallpaper. Drawn larger than the screen so the blur's
-        // see-through edges stay off screen.
-        Image {
-            id: wallpaperImage
+        // see-through edges stay off screen. A blurred picture needs little detail, so it's decoded
+        // and blurred at 1/4 of this screen's size and scaled up: it looks the same as blurring at full
+        // size but takes a fraction of the video memory. How blurry: blurMax below (in reduced pixels,
+        // so 12 here blurs about 48 screen pixels; higher is blurrier).
+        Item {
+            readonly property real reduction: 4
 
-            anchors.fill: parent
-            anchors.margins: -80
-            source: root.wallpaper ? "file://" + root.wallpaper : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            visible: false
-        }
+            x: -80
+            y: -80
+            width: (root.width + 160) / reduction
+            height: (root.height + 160) / reduction
+            scale: reduction
+            transformOrigin: Item.TopLeft
 
-        MultiEffect {
-            anchors.fill: wallpaperImage
-            source: wallpaperImage
-            blurEnabled: true
-            blur: 1.0
-            blurMax: 64
-            brightness: -0.12
-            saturation: 0.15
+            Image {
+                id: wallpaperImage
+
+                anchors.fill: parent
+                // Not before the screen has a size: a 0×0 sourceSize would decode the full picture.
+                source: root.wallpaper && root.width > 0 ? "file://" + root.wallpaper : ""
+                sourceSize: Qt.size(Math.ceil(width), Math.ceil(height))
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: false
+            }
+
+            MultiEffect {
+                anchors.fill: wallpaperImage
+                source: wallpaperImage
+                blurEnabled: true
+                blur: 1.0
+                blurMax: 12
+                brightness: -0.12
+                saturation: 0.15
+            }
         }
 
         Rectangle {
@@ -190,6 +232,7 @@ Item {
             spacing: -6
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDate(clock.date, "dddd, MMMM d")
                 color: Theme.text
@@ -205,6 +248,7 @@ Item {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 // 12-hour without AM/PM, like macOS
                 text: Qt.formatTime(clock.date, "h:mm")
@@ -235,26 +279,66 @@ Item {
                 event: root.nextEvent
             }
 
-            Repeater {
-                model: root.notifications.slice(0, 3)
+            // Notifications that arrived while locked: how many, and from which apps. What they say
+            // is in the Notification Center once unlocked.
+            Rectangle {
+                visible: root.notificationCount > 0
+                width: 380
+                height: 58
+                radius: 18
+                color: Qt.rgba(1, 1, 1, 0.16)
 
-                NotificationCard {
-                    required property var modelData
+                Rectangle {
+                    id: bell
 
-                    notification: modelData.notification
-                    received: modelData.received
-                    showText: Config.notificationPreviews
-                    now: clock.date.getTime()
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 34
+                    height: 34
+                    radius: 8
+                    color: Qt.rgba(1, 1, 1, 0.15)
+
+                    Text {
+                        textFormat: Text.PlainText
+                        anchors.centerIn: parent
+                        text: Theme.iBell
+                        color: Theme.text
+                        font.family: Theme.iconFont
+                        font.pixelSize: 18
+                    }
                 }
-            }
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.notifications.length > 3
-                text: qsTr("%n more notification(s)", "", root.notifications.length - 3)
-                color: Theme.textSecondary
-                font.family: Theme.font
-                font.pixelSize: 13
+                Column {
+                    anchors.left: bell.right
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        textFormat: Text.PlainText
+                        width: parent.width
+                        text: qsTr("%n notification(s)", "", root.notificationCount)
+                        elide: Text.ElideRight
+                        color: Theme.text
+                        font.family: Theme.font
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+
+                    Text {
+                        textFormat: Text.PlainText
+                        width: parent.width
+                        visible: text !== ""
+                        text: root.notificationApps.join(", ")
+                        elide: Text.ElideRight
+                        color: Theme.textSecondary
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                    }
+                }
             }
         }
 
@@ -276,6 +360,7 @@ Item {
             spacing: 10
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: Config.message !== ""
                 bottomPadding: 14
@@ -310,6 +395,7 @@ Item {
 
                 // No picture: initials, like macOS
                 Text {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     visible: faceImage.status !== Image.Ready
                     text: root.fullName.split(/\s+/).filter(w => w).slice(0, 2).map(w => w[0].toUpperCase()).join("")
@@ -321,6 +407,7 @@ Item {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root.fullName
                 color: Theme.text
@@ -337,6 +424,7 @@ Item {
 
             // In place of the field during the grace period
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: root.graceActive
                 height: 34
@@ -415,6 +503,7 @@ Item {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
@@ -435,6 +524,7 @@ Item {
                     spacing: 4
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         visible: root.capsLock
                         text: Theme.iCapsLock
@@ -452,6 +542,7 @@ Item {
                         color: Qt.rgba(1, 1, 1, root.busy ? 0.15 : 0.3)
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.centerIn: parent
                             text: Theme.iArrowRight
                             color: Theme.text
@@ -470,6 +561,7 @@ Item {
 
             // Errors, and a clear Caps Lock warning
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 height: 18
                 readonly property bool showError: root.errorText !== "" && !root.errorDismissed
@@ -514,6 +606,7 @@ Item {
                         color: Qt.rgba(1, 1, 1, powerMouse.pressed ? 0.35 : powerMouse.containsMouse ? 0.28 : 0.18)
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.centerIn: parent
                             text: powerButton.modelData.glyph
                             color: Theme.text
@@ -532,6 +625,7 @@ Item {
                     }
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: powerButton.modelData.label
                         color: Theme.text

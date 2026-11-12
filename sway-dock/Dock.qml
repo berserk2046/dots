@@ -7,7 +7,11 @@ import Quickshell.Widgets
 PanelWindow {
     id: dock
 
-    property var pinnedApps: []
+    // Apps, focus history and launch state, shared by every display's Dock (DockModel.qml)
+    required property DockModel shared
+    // Only the windows on this Dock's display (System Settings → Desktop & Dock); unpinned apps with
+    // no window here are left out
+    property bool ownWindowsOnly: false
     property MimeIndex mimeIndex: null
     property LauncherBadges badges: null
     property HyprlandEvents hyprland: null
@@ -31,9 +35,26 @@ PanelWindow {
     property var terminal: ["foot", "--app-id={appId}"]
 
     readonly property int barHeight: iconSize + padding * 2
-    // Desktop entries are passed only so app matching re-runs once they finish loading.
-    readonly property var apps: buildApps(pinnedApps, ToplevelManager.toplevels.values,
-                                          DesktopEntries.applications.values)
+    readonly property var apps: {
+        if (!ownWindowsOnly)
+            return shared.apps;
+        const here = w => Array.from(w.screens ?? []).some(s => s === screen || s?.name === screen?.name);
+        return shared.apps.map(a => ({
+                    id: a.id,
+                    pinned: a.pinned,
+                    windows: a.windows.filter(here)
+                })).filter(a => a.pinned || a.windows.length > 0);
+    }
+    // The icons are made per app id and kept while the app stays in the Dock: a window opening or
+    // closing only updates its app's icon instead of rebuilding them all.
+    readonly property var appIds: apps.map(a => a.id)
+    readonly property var appsById: {
+        const map = {};
+        for (const a of apps)
+            map[a.id] = a;
+        return map;
+    }
+    readonly property string appIdsKey: appIds.join("\n")
 
     // Unmagnified layout (apps, separator, trash), used to compute magnification without jitter.
     readonly property real baseRowWidth: (apps.length + 1) * iconSize + (apps.length + 1) * spacing + separatorWidth
@@ -57,13 +78,6 @@ PanelWindow {
     // A pinned icon dragged this far away from the dock is unpinned on release.
     readonly property bool dragRemoving: dragFrom >= 0 && apps[dragFrom]?.pinned === true
                                          && depthOf(dragX, dragY) > edgeMargin + barHeight + iconSize * 1.5
-    // In-memory focus history (window -> serial), shared with icons so they raise the most
-    // recently used window. Covers every window, however it was launched; nothing is saved.
-    property var focusStamps: new Map()
-    property int focusSerial: 0
-    // After files are dropped on an app, a new window of it appearing shortly after gets focus.
-    property var dropWatch: null
-
     // Icon under the pointer; hovering a running app opens the window preview list.
     property DockItem hoveredItem: null
     // Pointer x when it entered the preview; magnification stays frozen there meanwhile.
@@ -76,9 +90,6 @@ PanelWindow {
     // moves over the magnified icons above it. Being in the strip above the bar (e.g. after a
     // click there closed the menu) doesn't start it.
     property bool magnifying: false
-
-    // App keys launched from the dock -> time they stop bouncing if no window shows up.
-    property var launchingApps: ({})
 
     // Auto-hide: shown after the pointer rests on the screen edge, hidden shortly after it leaves.
     property bool hoverReveal: false
@@ -94,7 +105,7 @@ PanelWindow {
     }
 
     // Top left corner of this surface on its screen, for the fullscreen overlays. Read from
-    // `hyprctl layers`, since other bars' reserved space (e.g. waybar's) can move the dock.
+    // `hyprctl layers`, since other bars' reserved space (the menu bar's) can move the dock.
     property point surfaceOrigin: Qt.point(0, 0)
 
     // Hidden (but keeping its reserved space) while the focused window is fullscreen here.
@@ -203,46 +214,14 @@ PanelWindow {
         }
     }
 
-    onAppsChanged: {
+    // Apps came, went or changed places (not just one of their windows)
+    onAppIdsKeyChanged: {
         closeMenu();
         dragFrom = -1;
         dragTo = -1;
         dragItem = null;
         hoveredItem = null;
         preview.target = null;
-    }
-
-    function markLaunching(appId) {
-        const next = Object.assign({}, launchingApps);
-        next[appKey(appId)] = Date.now() + 10000;
-        launchingApps = next;
-    }
-
-    function isLaunching(app) {
-        return app.windows.length === 0 && appKey(app.id) in launchingApps;
-    }
-
-    // A window of a launching app appeared: stop its bounce now rather than at the timeout,
-    // so closing the app soon after doesn't make it bounce again.
-    function clearLaunching(window) {
-        if (!window.appId)
-            return;
-        const key = appKey(window.appId);
-        if (!(key in launchingApps))
-            return;
-        const next = Object.assign({}, launchingApps);
-        delete next[key];
-        launchingApps = next;
-    }
-
-    function pruneLaunching() {
-        const now = Date.now();
-        const next = {};
-        for (const key in launchingApps) {
-            if (launchingApps[key] > now)
-                next[key] = launchingApps[key];
-        }
-        launchingApps = next;
     }
 
     function isUrgent(app) {
@@ -257,70 +236,8 @@ PanelWindow {
         hyprland?.forceQuit(id => appKey(id) === key);
     }
 
-    function noteFocus(window) {
-        focusStamps.set(window, ++focusSerial);
-    }
-
-    function forgetWindow(window) {
-        focusStamps.delete(window);
-    }
-
-    function recencyOf(window) {
-        return focusStamps.get(window) ?? 0;
-    }
-
-    function watchDrop(appId) {
-        dropWatch = {
-            key: appKey(appId),
-            until: Date.now() + 3000
-        };
-    }
-
-    function checkDropWindow(window) {
-        if (!dropWatch || !window.appId)
-            return;
-        if (Date.now() > dropWatch.until) {
-            dropWatch = null;
-        } else if (appKey(window.appId) === dropWatch.key) {
-            dropWatch = null;
-            window.activate();
-        }
-    }
-
     function appKey(id) {
-        const entry = DesktopEntries.heuristicLookup(id);
-        return String(entry ? entry.id : id).toLowerCase();
-    }
-
-    function buildApps(pinned, toplevels, entries) {
-        const result = [];
-        const byKey = {};
-        for (const id of pinned) {
-            const app = {
-                id: id,
-                pinned: true,
-                windows: []
-            };
-            byKey[appKey(id)] = app;
-            result.push(app);
-        }
-        for (const toplevel of toplevels) {
-            if (!toplevel.appId)
-                continue;
-            const key = appKey(toplevel.appId);
-            let app = byKey[key];
-            if (!app) {
-                app = {
-                    id: toplevel.appId,
-                    pinned: false,
-                    windows: []
-                };
-                byKey[key] = app;
-                result.push(app);
-            }
-            app.windows.push(toplevel);
-        }
-        return result;
+        return shared.appKey(id);
     }
 
     function startReorder(index, x, y, target) {
@@ -454,17 +371,19 @@ PanelWindow {
         color: entryMouse.containsMouse ? DockTheme.hover : "transparent"
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: 9
             text: "✓"
             color: DockTheme.text
-            font.family: "SF Pro"
+            font.family: "SF Pro Text"
             font.pixelSize: 13
             visible: entry.checked
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.right: parent.right
@@ -473,7 +392,7 @@ PanelWindow {
             elide: Text.ElideRight
             text: entry.text
             color: entry.textColor
-            font.family: "SF Pro"
+            font.family: "SF Pro Text"
             font.pixelSize: 13
         }
 
@@ -622,15 +541,21 @@ PanelWindow {
                                                                                                        : Grid.AlignVCenter
 
             Repeater {
-                model: dock.apps
+                model: ScriptModel {
+                    values: dock.appIds
+                }
 
                 DockItem {
                     id: dockItem
 
-                    required property var modelData
+                    required property string modelData
                     required property int index
 
-                    app: modelData
+                    app: dock.appsById[modelData] ?? ({
+                            id: modelData,
+                            pinned: false,
+                            windows: []
+                        })
                     terminal: dock.terminal
                     size: dock.sizeFor(index)
                     showLabel: !menu.visible && !preview.visible && dock.dragFrom < 0
@@ -639,10 +564,10 @@ PanelWindow {
                     showIndicator: dock.showIndicators
                     dragging: dock.dragFrom === index
                     menuOpen: menu.visible
-                    launching: dock.isLaunching(modelData)
-                    urgent: dock.isUrgent(modelData)
+                    launching: dock.shared.isLaunching(app)
+                    urgent: dock.isUrgent(app)
                     badge: dock.badges?.badgeFor(pinId) ?? null
-                    onLaunched: dock.markLaunching(modelData.id)
+                    onLaunched: dock.shared.markLaunching(app.id)
                     onMenuRequested: alternate => dock.openMenu(dockItem, alternate)
                     onHoveredChanged: {
                         if (hovered)
@@ -651,10 +576,10 @@ PanelWindow {
                             dock.hoveredItem = null;
                     }
                     onDismissRequested: dock.closeMenu()
-                    recencyOf: window => dock.recencyOf(window)
+                    recencyOf: window => dock.shared.recencyOf(window)
                     acceptsDrag: dock.mimeIndex ? dock.mimeIndex.accepts(pinId, dock.mimeIndex.dragTypes) : true
                     onFileDragEntered: urls => dock.mimeIndex?.resolveDrag(urls)
-                    onFilesDropped: dock.watchDrop(modelData.id)
+                    onFilesDropped: dock.shared.watchDrop(app.id)
                     onReorderStarted: (x, y) => dock.startReorder(index, x, y, dockItem)
                     onReorderMoved: (x, y) => dock.moveReorder(x, y)
                     onReorderFinished: dock.finishReorder(dockItem)
@@ -685,14 +610,6 @@ PanelWindow {
             }
         }
 
-        // Stops launch bounces for apps that never opened a window.
-        Timer {
-            interval: 1000
-            repeat: true
-            running: Object.keys(dock.launchingApps).length > 0
-            onTriggered: dock.pruneLaunching()
-        }
-
         // Hover preview: the app's open windows; click one to focus it.
         Rectangle {
             id: preview
@@ -700,7 +617,7 @@ PanelWindow {
             property DockItem target: null
 
             visible: target !== null && target.running
-            width: 260
+            width: 300
             height: previewColumn.implicitHeight + 12
             x: dock.popupPosition(target, width, height).x
             y: dock.popupPosition(target, width, height).y
@@ -726,6 +643,7 @@ PanelWindow {
                 spacing: 4
 
                 Text {
+                    textFormat: Text.PlainText
                     x: 10
                     width: parent.width - 20
                     height: 24
@@ -733,9 +651,108 @@ PanelWindow {
                     elide: Text.ElideRight
                     text: preview.target?.entry?.name || preview.target?.app.id || ""
                     color: DockTheme.textDim
-                    font.family: "SF Pro"
+                    font.family: "SF Pro Text"
                     font.pixelSize: 12
                     font.bold: true
+                }
+
+                // Now playing, like the lock screen's media card: artwork, title, artist, controls.
+                Rectangle {
+                    id: nowPlaying
+
+                    readonly property var player: preview.target?.player ?? null
+
+                    visible: !!player?.trackTitle
+                    width: parent.width
+                    height: 64
+                    radius: 10
+                    color: DockTheme.hover
+
+                    ClippingRectangle {
+                        id: art
+
+                        x: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 48
+                        height: 48
+                        radius: 8
+                        color: DockTheme.hover
+
+                        Image {
+                            anchors.fill: parent
+                            source: nowPlaying.player?.trackArtUrl ?? ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize: Qt.size(96, 96)
+                        }
+                    }
+
+                    Column {
+                        anchors.left: art.right
+                        anchors.leftMargin: 10
+                        anchors.right: controls.left
+                        anchors.rightMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            textFormat: Text.PlainText
+                            width: parent.width
+                            text: nowPlaying.player?.trackTitle ?? ""
+                            elide: Text.ElideRight
+                            color: DockTheme.text
+                            font.family: "SF Pro Text"
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            textFormat: Text.PlainText
+                            width: parent.width
+                            text: nowPlaying.player?.trackArtist ?? ""
+                            elide: Text.ElideRight
+                            color: DockTheme.textDim
+                            font.family: "SF Pro Text"
+                            font.pixelSize: 12
+                        }
+                    }
+
+                    Row {
+                        id: controls
+
+                        anchors.right: parent.right
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Repeater {
+                            // Nerd Font glyphs, as on the lock screen: previous, play/pause, next
+                            model: [
+                                { glyph: 0xF04AE, size: 18, enabled: nowPlaying.player?.canGoPrevious ?? false, action: () => nowPlaying.player.previous() },
+                                { glyph: nowPlaying.player?.isPlaying ? 0xF03E4 : 0xF040A, size: 22, enabled: nowPlaying.player?.canTogglePlaying ?? false, action: () => nowPlaying.player.togglePlaying() },
+                                { glyph: 0xF04AD, size: 18, enabled: nowPlaying.player?.canGoNext ?? false, action: () => nowPlaying.player.next() }
+                            ]
+
+                            Text {
+                                textFormat: Text.PlainText
+                                required property var modelData
+
+                                width: 26
+                                height: 26
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                text: String.fromCodePoint(modelData.glyph)
+                                color: modelData.enabled ? DockTheme.text : DockTheme.textDim
+                                font.family: "FiraCode Nerd Font"
+                                font.pixelSize: modelData.size
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: parent.modelData.enabled
+                                    onClicked: parent.modelData.action()
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Repeater {
@@ -869,34 +886,6 @@ PanelWindow {
 
     }
 
-    // Watches every window's focus (for the focus history) and new windows (for file drops).
-    Variants {
-        model: ToplevelManager.toplevels.values
-
-        Connections {
-            required property var modelData
-
-            target: modelData
-            Component.onCompleted: {
-                if (modelData.activated)
-                    dock.noteFocus(modelData);
-                dock.checkDropWindow(modelData);
-                dock.clearLaunching(modelData);
-            }
-            Component.onDestruction: dock.forgetWindow(modelData)
-
-            function onActivatedChanged() {
-                if (modelData.activated)
-                    dock.noteFocus(modelData);
-            }
-
-            function onAppIdChanged() {
-                dock.checkDropWindow(modelData);
-                dock.clearLaunching(modelData);
-            }
-        }
-    }
-
     // The dragged icon is drawn on a fullscreen overlay so it is never clipped by the dock's
     // own surface. It takes no input; the pointer grab stays with the dock.
     PanelWindow {
@@ -937,12 +926,13 @@ PanelWindow {
             visible: dock.dragRemoving
 
             Text {
+                textFormat: Text.PlainText
                 id: removeLabel
 
                 anchors.centerIn: parent
                 text: qsTr("Remove")
                 color: DockTheme.text
-                font.family: "SF Pro"
+                font.family: "SF Pro Text"
                 font.pixelSize: 12
             }
         }

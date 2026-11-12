@@ -28,7 +28,7 @@ class Canceled(dbus.DBusException):
 
 
 bus = None
-pending = {}  # id -> (reply, error, kind)
+pending = {}  # id -> (reply, error, kind, device path)
 next_id = 0
 
 
@@ -47,8 +47,17 @@ def device_name(path):
 def ask(kind, device, reply, error, **extra):
     global next_id
     next_id += 1
-    pending[next_id] = (reply, error, kind)
+    pending[next_id] = (reply, error, kind, device)
     emit(dict(id=next_id, type=kind, device=device_name(device), **extra))
+
+
+def device_known(path):
+    """Paired or trusted already: a device you've accepted before."""
+    try:
+        props = dbus.Interface(bus.get_object("org.bluez", path), "org.freedesktop.DBus.Properties")
+        return bool(props.Get("org.bluez.Device1", "Paired")) or bool(props.Get("org.bluez.Device1", "Trusted"))
+    except dbus.DBusException:
+        return False
 
 
 def set_trusted(path):
@@ -64,10 +73,14 @@ class Agent(dbus.service.Object):
     def Release(self):
         loop.quit()
 
-    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
-    def AuthorizeService(self, device, uuid):
-        # Services of a device that's being paired or already paired are fine.
-        return
+    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="",
+                         async_callbacks=("reply", "error"))
+    def AuthorizeService(self, device, uuid, reply, error):
+        # A device you've paired or trusted may use its services; any other one asks first.
+        if device_known(device):
+            reply()
+        else:
+            ask("authorize", device, reply, error)
 
     @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="s",
                          async_callbacks=("reply", "error"))
@@ -90,7 +103,7 @@ class Agent(dbus.service.Object):
     @dbus.service.method("org.bluez.Agent1", in_signature="ou", out_signature="",
                          async_callbacks=("reply", "error"))
     def RequestConfirmation(self, device, passkey, reply, error):
-        set_trusted(device)
+        # Trusted only once you've confirmed the code (on_stdin), not before
         ask("confirm", device, reply, error, passkey="%06d" % passkey)
 
     @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="",
@@ -100,7 +113,7 @@ class Agent(dbus.service.Object):
 
     @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
     def Cancel(self):
-        for reply, error, kind in pending.values():
+        for reply, error, kind, device in pending.values():
             error(Canceled("Canceled"))
         pending.clear()
         emit(dict(id=0, type="cancel"))
@@ -118,7 +131,7 @@ def on_stdin(source, condition):
     entry = pending.pop(answer.get("id"), None)
     if not entry:
         return True
-    reply, error, kind = entry
+    reply, error, kind, device = entry
     if not answer.get("ok"):
         error(Rejected("Rejected by user"))
     elif kind == "pin":
@@ -129,6 +142,8 @@ def on_stdin(source, condition):
         except ValueError:
             error(Rejected("Not a number"))
     else:
+        if kind == "confirm":
+            set_trusted(device)
         reply()
     return True
 

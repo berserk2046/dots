@@ -48,7 +48,7 @@ Scope {
         if (syncing)
             return;
         syncing = true;
-        proc.command = ["python3", Quickshell.shellDir + "/calendar-sync.py", ...(force ? ["--force"] : [])];
+        proc.command = ["python3", decodeURIComponent(Qt.resolvedUrl("calendar-sync.py").toString().replace(/^file:\/\//, "")), ...(force ? ["--force"] : [])];
         proc.running = true;
     }
 

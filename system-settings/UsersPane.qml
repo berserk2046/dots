@@ -48,6 +48,7 @@ Column {
                 visible: avatarMouse.containsMouse
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     text: qsTr("Edit")
                     color: Theme.text
@@ -72,6 +73,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: avatar.bottom
             anchors.topMargin: 10
@@ -97,8 +99,9 @@ Column {
                     if (name === pane.fullName || /[:,=]/.test(name))
                         return;
                     pane.status = qsTr("Saving…");
-                    Store.run(["sudo", "-n", "chfn", "-f", name, Quickshell.env("USER")], (code, out, err) => {
-                        pane.status = code === 0 ? "" : qsTr("Failed: %1").arg(err.trim() || qsTr("sudo needs a password?"));
+                    // Asks for an administrator's password in the desktop's dialog (polkit)
+                    Store.run(["pkexec", "chfn", "-f", name, Quickshell.env("USER")], (code, out, err) => {
+                        pane.status = code === 0 || code === 126 ? "" : qsTr("Failed: %1").arg(err.trim().split("\n").pop() || qsTr("not allowed"));
                         pane.load();
                         Ui.userVersion++;
                     });
@@ -110,6 +113,7 @@ Column {
             title: qsTr("Account name")
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: Quickshell.env("USER")
                 color: Theme.textSecondary
@@ -122,6 +126,7 @@ Column {
             title: qsTr("Home folder")
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: Store.home
                 color: Theme.textSecondary
@@ -134,6 +139,7 @@ Column {
             title: qsTr("Login shell")
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: pane.shell
                 color: Theme.textSecondary

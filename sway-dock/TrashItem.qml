@@ -2,6 +2,7 @@ import QtQuick
 import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Widgets
+import qs.common
 
 // Trash at the end of the dock: click to open, drop files to move them to the trash,
 // right-click for Open / Empty Trash. Uses the freedesktop trash through `gio`.
@@ -33,7 +34,7 @@ Item {
     }
 
     function open() {
-        Quickshell.execDetached(["gio", "open", "trash:///"]);
+        Launch.app(["gio", "open", "trash:///"]);
     }
 
     function empty() {
@@ -84,12 +85,13 @@ Item {
         visible: trash.showLabel && (mouse.containsMouse || dropArea.containsDrag)
 
         Text {
+            textFormat: Text.PlainText
             id: label
 
             anchors.centerIn: parent
             text: qsTr("Trash")
             color: DockTheme.text
-            font.family: "SF Pro"
+            font.family: "SF Pro Text"
             font.pixelSize: 12
         }
     }

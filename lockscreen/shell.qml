@@ -1,18 +1,23 @@
 // Fixed ID so `qs ipc` finds this shell wherever the folder lives.
 //@ pragma ShellId lockscreen
-//@ pragma IconTheme MacTahoe-dark
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Services.Pam
 import Quickshell.Wayland
+// Not used here directly: importing the folder makes Quickshell register its singletons (Settings,
+// Displays), which Config.qml uses.
+import qs.common
 
-// macOS-style lock screen and notification daemon. Runs for the whole session; lock with
-//   qs -p <this folder> ipc call lock lock       (any key unlocks for Config.graceSeconds)
-//   qs -p <this folder> ipc call lock lockNow    (password right away, e.g. before sleep)
-// and open the Notification Center with
-//   qs -p <this folder> ipc call notifications toggle   (also: toggleDnd, clearAll)
+// macOS-style lock screen. Runs for the whole session, in its own process with as little in it as
+// possible: if it crashed while locked, the session would be stuck behind Hyprland's red screen. So the
+// notifications, which handle whatever apps send, live in desktop-shell; this shell only shows how many
+// arrived while locked. Lock with
+//   qs -p <this folder> ipc call lock lock          (when idle: any key unlocks for Config.graceSeconds)
+//   qs -p <this folder> ipc call lock lockNow       (password right away: a lock you asked for)
+//   qs -p <this folder> ipc call lock lockForSleep  (password right away and locked at once, with no
+//                                                    pictures of the desktop taken first: before sleep)
 ShellRoot {
     id: root
 
@@ -22,6 +27,8 @@ ShellRoot {
     property bool graceActive: false
     property string primaryName: ""
     property int shotVersion: 0
+    // Whether pictures of the desktop were taken for this lock
+    property bool hasShots: false
     readonly property string shotDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/lockscreen"
     property bool authBusy: false
     property string pendingPassword: ""
@@ -31,15 +38,31 @@ ShellRoot {
 
     property var nextEvent: null
 
-    function lock(grace) {
-        if (sessionLock.locked || capturing)
+    // `capture`: take pictures of the desktop first, for the slide-up when unlocking. Not before
+    // sleep: the computer must be locked before it goes to sleep, not a second later.
+    function lock(grace, capture) {
+        if (sessionLock.locked)
             return;
+        if (capturing) {
+            // Already on its way: a lock that must not wait (sleep) cuts the pictures short
+            if (!capture) {
+                pendingGrace = pendingGrace && grace;
+                engage();
+            }
+            return;
+        }
         capturing = true;
         pendingGrace = grace;
         const names = Quickshell.screens.map(s => s.name);
         const wanted = Config.mainScreen || Hyprland.focusedMonitor?.name || "";
         primaryName = names.includes(wanted) ? wanted : names[0] ?? "";
         shotVersion++;
+        if (!capture) {
+            hasShots = false;
+            engage();
+            return;
+        }
+        hasShots = true;
         // Pictures of each monitor for the slide-up on unlock, in a private runtime folder.
         // Uncompressed (PPM): compressing a photo-like wallpaper into a PNG takes seconds.
         captureProc.command = ["sh", "-c", 'dir=$1; v=$2; shift 2; mkdir -p "$dir" && chmod 700 "$dir" && rm -f "$dir"/*.ppm; for n; do grim -t ppm -o "$n" "$dir/$n-$v.ppm"; done', "sh", shotDir, String(shotVersion), ...names];
@@ -54,7 +77,6 @@ ShellRoot {
         captureTimeout.stop();
         unlocking = false;
         errorText = "";
-        daemon.clearLockNotifications();
         graceActive = pendingGrace && Config.graceSeconds > 0;
         if (graceActive)
             graceTimer.restart();
@@ -120,7 +142,6 @@ ShellRoot {
         onTriggered: {
             sessionLock.locked = false;
             root.unlocking = false;
-            daemon.clearLockNotifications();
             Quickshell.execDetached(["sh", "-c", 'rm -f "$1"/*.ppm', "sh", root.shotDir]);
         }
     }
@@ -162,34 +183,65 @@ ShellRoot {
 
             color: "black"
 
-            LockScreen {
-                primary: surface.screen?.name === root.primaryName
-                desktopImage: root.shotDir + "/" + (surface.screen?.name ?? "") + "-" + root.shotVersion + ".ppm"
-                showPrivate: true
-                notifications: daemon.lockNotifications
-                doNotDisturb: daemon.doNotDisturb
-                nextEvent: root.nextEvent
-                graceActive: root.graceActive
-                busy: root.authBusy
-                errorText: root.errorText
-                failures: root.failures
-                unlocking: root.unlocking
-                onSubmitted: password => root.submit(password)
-                onGraceUnlock: root.finishUnlock()
-                onPowerAction: action => root.power(action)
+            // Built when locking and destroyed once unlocked, so its pictures (the blurred wallpaper,
+            // the desktop for the slide-up), effects and text are freed, not kept until the next lock.
+            Loader {
+                id: content
+
+                // The surface's Qt window
+                readonly property var qtWindow: Window.window
+
+                anchors.fill: parent
+                active: sessionLock.locked
+                onActiveChanged: {
+                    if (!active)
+                        Qt.callLater(root.releaseGraphics, qtWindow);
+                }
+
+                sourceComponent: LockScreen {
+                    primary: surface.screen?.name === root.primaryName
+                    wallpaper: Config.wallpaperFor(surface.screen?.name ?? "")
+                    desktopImage: surface.screen && root.hasShots ? root.shotDir + "/" + surface.screen.name + "-" + root.shotVersion + ".ppm" : ""
+                    showPrivate: true
+                    notificationCount: root.notificationCount
+                    notificationApps: root.notificationApps
+                    doNotDisturb: root.doNotDisturb
+                    nextEvent: root.nextEvent
+                    graceActive: root.graceActive
+                    busy: root.authBusy
+                    errorText: root.errorText
+                    failures: root.failures
+                    unlocking: root.unlocking
+                    onSubmitted: password => root.submit(password)
+                    onGraceUnlock: root.finishUnlock()
+                    onPowerAction: action => root.power(action)
+                }
             }
         }
+    }
+
+    // After unlocking: asks Qt to drop what the lock surface's window still holds for drawing (cached
+    // textures, glyphs, render targets) and collects the JavaScript side of the destroyed screen.
+    function releaseGraphics(qtWindow) {
+        try {
+            qtWindow?.releaseResources();
+        } catch (error) {}
+        gc();
     }
 
     IpcHandler {
         target: "lock"
 
         function lock(): void {
-            root.lock(true);
+            root.lock(true, true);
         }
 
         function lockNow(): void {
-            root.lock(false);
+            root.lock(false, true);
+        }
+
+        function lockForSleep(): void {
+            root.lock(false, false);
         }
 
         function isLocked(): bool {
@@ -244,10 +296,41 @@ ShellRoot {
         onTriggered: root.syncCalendar()
     }
 
-    // Notifications: banners, lock screen list, history and Notification Center, Do Not Disturb
-    NotificationDaemon {
-        id: daemon
+    // ---- Notifications ----
 
-        locked: sessionLock.locked
+    // The daemon runs in desktop-shell (see the top of this file). It's told when the screen locks
+    // and unlocks, and writes how many notifications arrived since, and from which apps, to its
+    // status file (the one waybar's bell reads): {dnd, lockCount, lockApps}.
+    property int notificationCount: 0
+    property var notificationApps: []
+    property bool doNotDisturb: false
+
+    Connections {
+        target: sessionLock
+
+        function onLockedChanged() {
+            Quickshell.execDetached(["qs", "-p", Quickshell.env("HOME") + "/.config/desktop-shell", "ipc", "call", "notifications", "setLocked",
+                                     sessionLock.locked ? "true" : "false"]);
+            if (!sessionLock.locked) {
+                root.notificationCount = 0;
+                root.notificationApps = [];
+            }
+        }
+    }
+
+    FileView {
+        path: root.shotDir + "/notifications.json"
+        watchChanges: sessionLock.locked
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const status = JSON.parse(text());
+                root.doNotDisturb = status.dnd === true;
+                // Only numbers and names are taken from it, and only while locked
+                root.notificationCount = sessionLock.locked ? Math.max(0, Math.round(Number(status.lockCount) || 0)) : 0;
+                root.notificationApps = sessionLock.locked && Array.isArray(status.lockApps) ? status.lockApps.slice(0, 4).map(a => String(a).slice(0, 40)) : [];
+            } catch (error) {}
+        }
     }
 }

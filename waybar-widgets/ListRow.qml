@@ -56,6 +56,7 @@ Rectangle {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 elide: Text.ElideRight
                 text: row.title
@@ -66,6 +67,7 @@ Rectangle {
             }
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 visible: row.subtitle !== ""
                 elide: Text.ElideRight

@@ -37,6 +37,7 @@ Column {
     }
 
     component ErrorText: Text {
+        textFormat: Text.PlainText
         width: parent?.width ?? 0
         wrapMode: Text.WordWrap
         color: Theme.danger
@@ -140,6 +141,7 @@ Column {
 
         // New secured network: password prompt
         Text {
+            textFormat: Text.PlainText
             visible: netRow.open && !netRow.isKnown && netRow.modelData.enterprise
             width: parent.width
             wrapMode: Text.WordWrap
@@ -210,6 +212,7 @@ Column {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 text: qsTr("Wi-Fi")
                 color: Theme.text
                 font.family: Theme.font
@@ -218,6 +221,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 text: panel.net.wifi || qsTr("No wireless interface")
                 color: Theme.textSecondary
                 font.family: Theme.font
@@ -236,6 +240,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         width: parent.width - 16
         visible: panel.net.wifi !== "" && panel.net.wifiEnabled && !panel.net.wpaReachable
@@ -248,6 +253,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         visible: panel.net.wifiHardBlocked
         text: qsTr("Wi-Fi is disabled by a hardware switch.")
@@ -443,6 +449,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     x: 8
                     visible: panel.net.otherNetworks.length === 0
                     height: 28
@@ -627,6 +634,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 visible: ethRow.open
                 text: qsTr("Configure IPv4")
                 color: Theme.textSecondary

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- The two things this desktop does as root, each through its own root-owned helper in
+     /usr/local/libexec/desktop-helpers (installed by system/install.sh). An administrator's password
+     is asked for every single time (auth_admin: nothing is remembered), in the desktop's own dialog
+     (desktop-shell is the polkit agent). -->
+<policyconfig>
+  <vendor>dotfiles</vendor>
+
+  <action id="org.dotfiles.desktop.net-admin">
+    <description>Change network settings</description>
+    <message>System Settings is trying to change network settings.</message>
+    <icon_name>network-wired</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/libexec/desktop-helpers/net-admin</annotate>
+  </action>
+
+  <action id="org.dotfiles.desktop.greetd-install">
+    <description>Update the login screen</description>
+    <message>System Settings is trying to update the login screen.</message>
+    <icon_name>system-users</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/libexec/desktop-helpers/greetd-install</annotate>
+  </action>
+</policyconfig>

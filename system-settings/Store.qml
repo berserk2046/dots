@@ -4,7 +4,8 @@ import Quickshell
 import Quickshell.Io
 
 // Everything the app changes lives in settings.json next to this file, as {section: {key: value}}.
-// The dock and the lock screen read that file directly (and follow its changes). For Hyprland, the
+// The desktop's shell and the lock screen read that file directly (shell-common/Settings.qml) and
+// follow its changes. For Hyprland, the
 // Hyprland-related values are also written to ~/.config/hypr/system-settings.lua, which hyprland.lua
 // loads, followed by a config reload. hypridle and hyprsunset get their own config files.
 Singleton {
@@ -21,7 +22,7 @@ Singleton {
     property string lastWritten: ""
 
     // Sections whose values end up in system-settings.lua.
-    readonly property var hyprSections: ["general", "appearance", "displays", "keyboard", "pointer", "windows"]
+    readonly property var hyprSections: ["general", "appearance", "displays", "keyboard", "pointer", "windows", "hyprland"]
 
     function get(section, key, fallback) {
         const value = data?.[section]?.[key];
@@ -106,6 +107,23 @@ Singleton {
                                 + luaValue(value[k], indent + 1) + ",").join("\n") + "\n" + "    ".repeat(indent) + "}";
     }
 
+    // Hyprland's blur size and passes for System Settings → Hyprland → Blur. The blur reaches about
+    // size × 2^passes pixels; "medium" is hyprland.lua's default.
+    readonly property var blurStrengths: ({
+            light: {
+                size: 6,
+                passes: 2
+            },
+            medium: {
+                size: 8,
+                passes: 3
+            },
+            strong: {
+                size: 12,
+                passes: 3
+            }
+        })
+
     // The values hyprland.lua reads (see the `S.` uses there).
     function hyprTable() {
         const S = {};
@@ -114,9 +132,11 @@ Singleton {
                 S[key] = value;
         };
         put("terminal", get("general", "terminal"));
+        put("desktop_wallpaper", get("desktop", "drawWallpaper"));
         const items = get("general", "loginItems");
         if (items)
             put("login_items", items.filter(i => i.enabled !== false && i.command).map(i => i.command));
+        put("single_render_thread", get("general", "singleRenderThread"));
         put("icon_theme", get("appearance", "iconTheme"));
         put("cursor_theme", get("appearance", "cursorTheme"));
         put("cursor_size", get("appearance", "cursorSize"));
@@ -134,8 +154,12 @@ Singleton {
         put("mouse_natural_scroll", get("pointer", "mouseNaturalScroll"));
         put("tap_to_click", get("pointer", "tapToClick"));
         put("disable_while_typing", get("pointer", "disableWhileTyping"));
+        // Focus mode from Hyprland (0 click, 1 hover, 2 hover but keys on click), else the older on/off
+        const followMode = get("hyprland", "followMouse");
         const follow = get("pointer", "focusFollowsMouse");
-        if (follow !== undefined)
+        if (followMode !== undefined)
+            put("follow_mouse", followMode);
+        else if (follow !== undefined)
             put("follow_mouse", follow ? 1 : 0);
         put("float_by_default", get("windows", "floatByDefault"));
         put("title_bars", get("windows", "titleBars"));
@@ -143,6 +167,27 @@ Singleton {
         put("gaps_out", get("windows", "gapsOut"));
         put("rounding", get("windows", "rounding"));
         put("border_size", get("windows", "borderSize"));
+        // System Settings → Hyprland
+        const h = key => get("hyprland", key);
+        put("layout", h("layout"));
+        put("inactive_opacity", h("inactiveOpacity"));
+        put("dim_inactive", h("dimInactive"));
+        put("dim_strength", h("dimStrength"));
+        put("shadows", h("shadows"));
+        put("blur", h("blur"));
+        const blur = blurStrengths[h("blurStrength")];
+        if (blur) {
+            put("blur_size", blur.size);
+            put("blur_passes", blur.passes);
+        }
+        put("animations", h("animations"));
+        put("focus_on_activate", h("focusOnActivate"));
+        put("warp_pointer", h("warpPointer"));
+        put("hide_on_key_press", h("hideCursorTyping"));
+        put("cursor_timeout", h("cursorTimeout"));
+        put("middle_click_paste", h("middleClickPaste"));
+        put("vrr", h("vrr"));
+        put("numlock", h("numlock"));
         return S;
     }
 
@@ -162,6 +207,9 @@ Singleton {
             id: proc
 
             property var callback: null
+            // Written to the command's stdin, which is then closed: for text that mustn't be an
+            // argument, where every user could read it in the process list
+            property var input: null
             property int code: -1
             property bool exitSeen: false
             property bool outputSeen: false
@@ -180,6 +228,13 @@ Singleton {
                 destroy();
             }
 
+            stdinEnabled: input !== null
+            onStarted: {
+                if (input !== null) {
+                    write(input);
+                    stdinEnabled = false;
+                }
+            }
             stdout: StdioCollector {
                 id: out
 
@@ -199,11 +254,12 @@ Singleton {
         }
     }
 
-    // Runs a command; callback(code, stdout, stderr) when it ends.
-    function run(command, callback) {
+    // Runs a command; callback(code, stdout, stderr) when it ends. `input`, if given, is its stdin.
+    function run(command, callback, input) {
         const proc = commandComponent.createObject(store, {
             command: command,
-            callback: callback ?? null
+            callback: callback ?? null,
+            input: input ?? null
         });
         proc.running = true;
     }
@@ -212,11 +268,12 @@ Singleton {
     // whose order matters, e.g. two quick edits of the same file or on/off/on of a setting.
     property var queues: ({})
 
-    function runQueued(key, command, callback) {
+    function runQueued(key, command, callback, input) {
         const queue = queues[key] ?? [];
         queue.push({
             command: command,
-            callback: callback
+            callback: callback,
+            input: input
         });
         queues[key] = queue;
         if (queue.length === 1)
@@ -233,7 +290,7 @@ Singleton {
                 if (queues[key].length > 0)
                     runNext(key);
             }
-        });
+        }, job.input);
     }
 
     function script(name) {
@@ -241,9 +298,10 @@ Singleton {
     }
 
     // Writes a file atomically, then runs `after` (a command) if given. Writes to one file run in order.
-    function writeFile(path, text, after, callback) {
-        runQueued("file:" + path, ["sh", "-c", 'mkdir -p "$(dirname "$1")" && printf "%s" "$2" > "$1.tmp" && mv "$1.tmp" "$1" && shift 2 && [ $# -eq 0 ] || "$@"',
-             "sh", path, text, ...(after ?? [])], callback);
+    // The text goes in on stdin, not as an argument. `secret` creates the file readable by you only.
+    function writeFile(path, text, after, callback, secret) {
+        runQueued("file:" + path, ["sh", "-c", 'umask "$2"; mkdir -p "$(dirname "$1")" && cat > "$1.tmp" && mv "$1.tmp" "$1" && shift 2 && [ $# -eq 0 ] || "$@"',
+             "sh", path, secret ? "077" : "022", ...(after ?? [])], callback, text);
     }
 
     // Starts a program through Hyprland, so it isn't tied to this app's lifetime.
@@ -256,13 +314,69 @@ Singleton {
             () => launch(program));
     }
 
+    // The lock screen's shell: lock, lockNow
     function lockscreenIpc(args, callback) {
         run(["qs", "-p", lockscreenDir, "ipc", "call", ...args], callback);
     }
 
-    // Restarts a Quickshell shell (by folder) through Hyprland.
-    function restartShell(folder) {
-        run(["qs", "kill", "-p", folder], () => launch("qs -p " + folder));
+    // The desktop's shell (the Dock, the window switcher, the menu bar panels, the desktop, the
+    // notifications and the password dialog, in one process): notifications, panel, switcher
+    readonly property string desktopShellDir: home + "/.config/desktop-shell"
+
+    function desktopIpc(args, callback) {
+        run(["qs", "-p", desktopShellDir, "ipc", "call", ...args], callback);
+    }
+
+    // What a Quickshell shell starts with, the same as hyprland.lua gives it at login (see there):
+    // one memory pool (MALLOC_CONF), the icon theme (QS_ICON_THEME, from icon_theme in
+    // system-settings.lua) and, if picked in General → Performance, one thread drawing every window
+    // (QSG_RENDER_LOOP).
+    function shellCommand(folder) {
+        const theme = get("appearance", "iconTheme", "MacTahoe-dark");
+        return "MALLOC_CONF=narenas:1 " + (/^[A-Za-z0-9._+-]+$/.test(theme) ? "QS_ICON_THEME=" + theme + " " : "")
+               + (get("general", "singleRenderThread", false) ? "QSG_RENDER_LOOP=basic " : "") + "qs -p " + folder;
+    }
+
+    // General → Performance: takes effect by restarting the desktop's shell (a second without the
+    // Dock and the desktop icons); system-settings.lua is rewritten for the next login.
+    function setSingleRenderThread(on) {
+        set("general", "singleRenderThread", on);
+        restartShell(desktopShellDir);
+    }
+
+    // Restarts a Quickshell shell (by folder) through Hyprland: only if it was running, unless `always`.
+    function restartShell(folder, always) {
+        run(["qs", "kill", "-p", folder], code => {
+            if (code === 0 || always)
+                launch(shellCommand(folder));
+        });
+    }
+
+    // ---- Desktop: icons and wallpaper ----
+
+    // Whether the desktop draws the wallpaper, rather than hyprpaper (System Settings → Wallpaper)
+    function desktopDrawsWallpaper() {
+        return get("desktop", "drawWallpaper", true);
+    }
+
+    function setDesktop(key, value) {
+        set("desktop", key, value);
+        if (key === "drawWallpaper") {
+            writeHyprland(false); // what hyprland.lua starts at login
+            applyDesktop();
+        }
+    }
+
+    // Starts or stops hyprpaper to match the setting. It stops a moment after the desktop has had
+    // time to draw the wallpaper, so the screen doesn't flash black.
+    function applyDesktop() {
+        run(["sh", "-c", `if [ "$1" = 1 ]; then
+                pgrep -x hyprpaper >/dev/null || hyprctl dispatch 'hl.dsp.exec_cmd("hyprpaper")' >/dev/null
+            else
+                sleep 1.5
+                pkill -x hyprpaper
+            fi
+            true`, "sh", desktopDrawsWallpaper() ? "0" : "1"]);
     }
 
     // ---- Appearance ----
@@ -271,52 +385,48 @@ Singleton {
         run(["sh", script("appearance.sh"), ...args], callback);
     }
 
-    // GTK, the Dock, the lock screen (notification icons), the window switcher and this app; Quickshell
-    // reads its icon theme from the `//@ pragma IconTheme` line at startup, so the other shells restart.
+    // GTK and the desktop's shell (the Dock, the window switcher, notifications, desktop icons).
+    // Quickshell takes its icon theme from QS_ICON_THEME when it starts, so the shell restarts with
+    // the new one; system-settings.lua is rewritten (the appearance section is one of hyprSections)
+    // for the next login. This app shows the new icons the next time it's opened.
     function setIconTheme(name) {
         set("appearance", "iconTheme", name);
         appearance(["icons", name]);
-        const restarted = [home + "/.config/sway-dock", lockscreenDir, home + "/.config/app-switcher"];
-        run(["sh", "-c", 'theme=$1; shift; for f; do [ -f "$f/shell.qml" ] && sed -i "s|^//@ pragma IconTheme .*|//@ pragma IconTheme $theme|" "$f/shell.qml"; done; true',
-             "sh", name, ...restarted, dir], () => restarted.forEach(folder => restartShell(folder)));
+        restartShell(desktopShellDir);
     }
 
-    // ---- Wallpaper: hyprpaper ----
+    // ---- Wallpaper: hyprpaper (or the desktop, see desktopDrawsWallpaper) ----
 
     readonly property string defaultWallpaper: home + "/Pictures/Wallpapers/wallpaper.jpg"
 
     // Writes hyprpaper.conf (read when hyprpaper starts) and switches the running hyprpaper over IPC.
-    function writeWallpaper(monitorNames) {
-        const fit = get("wallpaper", "fit", "cover");
-        const main = get("wallpaper", "path", defaultWallpaper);
-        const perMonitor = get("wallpaper", "monitors", {});
-        const block = (monitor, path) => ["", "wallpaper {", "    monitor = " + monitor, "    path = " + path, "    fit_mode = " + fit, "}"];
-        let lines = ["# Written by System Settings → Wallpaper; changes here are overwritten.", "splash = false"];
-        lines = lines.concat(block("", main));
-        for (const name in perMonitor)
-            lines = lines.concat(block(name, perMonitor[name]));
-        const paths = monitorNames.map(name => perMonitor[name] ?? main);
-        writeFile(home + "/.config/hypr/hyprpaper.conf", lines.join("\n") + "\n", null, () => {
-            // hyprctl splits its argument on commas, so a path with one needs a restart instead.
-            if (paths.some(p => p.includes(",")))
-                return restart("hyprpaper");
-            run(["pgrep", "-x", "hyprpaper"], code => {
-                if (code !== 0)
-                    return launch("hyprpaper");
-                monitorNames.forEach((name, i) => run(["hyprctl", "hyprpaper", "wallpaper", name + "," + paths[i] + "," + fit]));
-            });
-        });
+    // wallpaper.py first scales the picture down to each connected display's size, since hyprpaper
+    // keeps pictures decoded at their full size. The settings are passed along, as settings.json may
+    // not be saved yet. Queued, so quick picks apply in order. When the desktop draws the wallpaper it
+    // follows settings.json by itself, and hyprpaper.conf is only kept up to date, for when it doesn't.
+    function writeWallpaper() {
+        const settings = {
+            path: get("wallpaper", "path", defaultWallpaper),
+            monitors: get("wallpaper", "monitors", {}),
+            fit: get("wallpaper", "fit", "cover"),
+            startHyprpaper: !desktopDrawsWallpaper()
+        };
+        runQueued("wallpaper", ["python3", script("wallpaper.py"), JSON.stringify(settings)]);
     }
 
     // ---- Lock screen: hypridle ----
 
     function writeIdle() {
+        // lock_cmd answers `loginctl lock-session`, which the idle timer below sends: any key unlocks
+        // for the grace period. Before sleep the password is asked right away, and the screen is locked
+        // at once (lockForSleep takes no pictures of the desktop first); inhibit_sleep = 3 makes
+        // hypridle hold the sleep back until the screen really is locked.
         const lockCmd = "qs -p " + lockscreenDir + " ipc call lock lock";
         const dpms = action => "hyprctl dispatch 'hl.dsp.dpms({ action = \"" + action + "\" })'";
         const lines = ["# Written by System Settings → Lock Screen; changes here are overwritten.", "general {",
                        "    lock_cmd = " + lockCmd];
         if (get("lockScreen", "lockBeforeSleep", true))
-            lines.push("    before_sleep_cmd = qs -p " + lockscreenDir + " ipc call lock lockNow");
+            lines.push("    before_sleep_cmd = qs -p " + lockscreenDir + " ipc call lock lockForSleep", "    inhibit_sleep = 3");
         lines.push("    after_sleep_cmd = " + dpms("on"), "}");
         const listener = (minutes, onTimeout, onResume) => {
             if (!(minutes > 0))

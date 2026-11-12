@@ -174,6 +174,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             id: labelText
 
             anchors.centerIn: parent
@@ -217,6 +218,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: dn.date.getDate()
             color: dn.isToday ? "#ffffff" : dn.dim ? (Theme.light ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(1, 1, 1, 0.2)) : dn.weekend ? Theme.textSecondary : Theme.text
@@ -253,6 +255,7 @@ Column {
                 spacing: 6
 
                 Text {
+                    textFormat: Text.PlainText
                     id: timeText
 
                     // "h" is only 12-hour when the same format has "AP".
@@ -267,6 +270,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.baseline: timeText.baseline
                     text: Qt.formatTime(panel.now, "AP")
                     color: Theme.textSecondary
@@ -277,6 +281,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 text: panel.locale.toString(panel.now, "dddd, MMMM d, yyyy")
                 color: Theme.textSecondary
                 font.family: Theme.font
@@ -305,6 +310,7 @@ Column {
         height: 32
 
         Text {
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.leftMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -354,6 +360,7 @@ Column {
             model: 7
 
             Text {
+                textFormat: Text.PlainText
                 required property int index
 
                 width: weekdays.width / 7
@@ -471,6 +478,7 @@ Column {
             height: visible ? 20 : 0
 
             Text {
+                textFormat: Text.PlainText
                 width: weekView.gutter
                 height: 20
                 verticalAlignment: Text.AlignVCenter
@@ -501,6 +509,7 @@ Column {
                                        Qt.color(allDayCell.items[0]?.color ?? Theme.accent).b, 0.35)
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.fill: parent
                             anchors.leftMargin: 3
                             anchors.rightMargin: 2
@@ -594,6 +603,7 @@ Column {
                         height: panel.hourHeight
 
                         Text {
+                            textFormat: Text.PlainText
                             visible: parent.index > 0
                             width: weekView.gutter - 6
                             y: -height / 2
@@ -663,6 +673,7 @@ Column {
                                 }
 
                                 Text {
+                                    textFormat: Text.PlainText
                                     x: 4
                                     y: 1
                                     width: parent.width - 5
@@ -731,6 +742,7 @@ Column {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 text: panel.locale.toString(panel.selected, "dddd, MMMM d")
                 color: Theme.text
                 font.family: Theme.font
@@ -739,6 +751,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 text: qsTr("Week %1  ·  Day %2").arg(panel.weekNumber(panel.selected)).arg(panel.dayOfYear(panel.selected))
                 color: Theme.textSecondary
                 font.family: Theme.font
@@ -758,6 +771,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: panel.relative(panel.selected)
                 color: panel.sameDay(panel.selected, panel.today) ? panel.red : Theme.textSecondary
@@ -795,6 +809,7 @@ Column {
                 spacing: 1
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     elide: Text.ElideRight
                     text: eventRow.modelData.title
@@ -804,6 +819,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     elide: Text.ElideRight
                     text: [panel.cals.timeRange(eventRow.modelData), eventRow.modelData.location].filter(x => x).join("  ·  ")
@@ -816,6 +832,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         height: 24
         visible: panel.selectedEvents.length > 6
@@ -827,6 +844,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         width: parent.width - 16
         height: implicitHeight + 8
@@ -844,6 +862,7 @@ Column {
         model: panel.cals.calendars.filter(c => c.error && c.count === 0)
 
         Text {
+            textFormat: Text.PlainText
             required property var modelData
 
             x: 8

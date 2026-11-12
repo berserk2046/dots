@@ -1,17 +1,15 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Io
+import qs.common
 
-// Colors, fonts and glyphs shared by the panels. Colors match sway-dock's menus. They're dark unless a
-// shell sets `followScheme` (these panels and System Settings do): then they follow the GTK color
-// scheme that System Settings → Appearance sets, light or dark.
+// Colors, fonts and glyphs shared by the panels and System Settings. Colors match sway-dock's menus,
+// light or dark following the GTK color scheme that System Settings → Appearance sets (Appearance,
+// read once for every part of the shell).
 Singleton {
     id: theme
 
-    property bool followScheme: false
-    property string scheme: "" // org.gnome.desktop.interface color-scheme
-    readonly property bool light: followScheme && scheme === "prefer-light"
+    readonly property bool light: Appearance.light
 
     readonly property color panel: light ? "#ececec" : "#000000"
     readonly property color border: light ? "#26000000" : "#26ffffff"
@@ -42,16 +40,7 @@ Singleton {
     // System Settings' sidebar, see-through so Hyprland blurs what's behind the window
     readonly property color sidebar: light ? "#c7f0f0f0" : "#bf161618"
 
-    Process {
-        running: theme.followScheme
-        command: ["sh", "-c", "gsettings get org.gnome.desktop.interface color-scheme; gsettings monitor org.gnome.desktop.interface color-scheme"]
-        stdout: SplitParser {
-            // "'prefer-dark'" from get, "color-scheme: 'prefer-dark'" from monitor
-            onRead: line => theme.scheme = line.replace(/^color-scheme:\s*/, "").replace(/'/g, "").trim()
-        }
-    }
-
-    readonly property string font: "SF Pro"
+    readonly property string font: "SF Pro Text"
     readonly property string iconFont: "FiraCode Nerd Font"
     // Multiplies every text size (not the glyphs); System Settings raises it in its shell.qml.
     property real fontScale: 1

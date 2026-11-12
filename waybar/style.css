@@ -7,7 +7,7 @@
     min-height: 0;
     border: none;
     border-radius: 0;
-    font-family: "SF Pro Text", "SF Pro", "FiraCode Nerd Font";
+    font-family: "SF Pro Text", "FiraCode Nerd Font";
     font-size: 13px;
     font-weight: 500;
 }
@@ -40,7 +40,7 @@ tooltip label {
 #custom-app,
 #submap,
 #tray,
-#custom-spotify,
+#mpris,
 #mpd,
 #custom-keyboard,
 #custom-system,
@@ -62,7 +62,7 @@ tooltip label {
 
 /* Everything that opens a panel or does something on click */
 #custom-power:hover,
-#custom-spotify:hover,
+#mpris:hover,
 #mpd:hover,
 #custom-keyboard:hover,
 #custom-system:hover,

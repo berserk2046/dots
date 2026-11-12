@@ -1,6 +1,7 @@
 import QtQuick
 
 Text {
+    textFormat: Text.PlainText
     property int size: 15
 
     font.family: Theme.iconFont

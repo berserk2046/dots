@@ -1,5 +1,6 @@
 import QtQuick
 import qs.shared
+import qs.common
 
 // Displays: arrange monitors by dragging them, then pick resolution, refresh rate, scale, rotation,
 // mirroring and the main display. Changes apply live through `hyprctl eval` and revert after 15
@@ -17,6 +18,17 @@ Column {
     property real brightness: -1
     readonly property var night: Store.get("displays", "nightShift", {})
     readonly property var names: monitors.map(m => m.name)
+    // The main display's port name: the one picked (kept by monitor: make, model and serial, see
+    // Displays), else the first
+    readonly property string mainName: Displays.mainName(Store.get("displays", "main", "")) || (names[0] ?? "")
+
+    // How a display's settings are saved for Hyprland: by its description ("desc:Dell Inc. U2720Q
+    // ABC123"), so they follow the monitor to another port. One without a serial number can't be told
+    // from its twin, so it's saved by port.
+    function savedOutput(name) {
+        const m = monitors.find(o => o.name === name);
+        return m && m.serial && m.description ? "desc:" + m.description : name;
+    }
     readonly property var current: draft[selected] ?? null
     readonly property var currentInfo: monitors.find(m => m.name === selected) ?? null
     readonly property bool changed: JSON.stringify(draft) !== JSON.stringify(applied)
@@ -108,7 +120,11 @@ Column {
 
     function keep() {
         countdown = 0;
-        Store.set("displays", "monitors", Object.values(draft).map(rule));
+        Store.set("displays", "monitors", Object.values(draft).map(spec => Object.assign(rule(spec), {
+                output: savedOutput(spec.output)
+            })));
+        // The desktop picture is scaled to each display's size; redo that for the new sizes.
+        Store.writeWallpaper();
     }
 
     function revert() {
@@ -205,7 +221,7 @@ Column {
 
                     // Menu bar of the main display
                     Rectangle {
-                        visible: (Store.get("displays", "main", "") || pane.names[0]) === tile.modelData.output
+                        visible: pane.mainName === tile.modelData.output
                         x: 3
                         y: 3
                         width: parent.width - 6
@@ -215,6 +231,7 @@ Column {
                     }
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         width: parent.width - 8
                         horizontalAlignment: Text.AlignHCenter
@@ -358,15 +375,15 @@ Column {
                             }))
                 ]
                 value: pane.current?.mirror ? "mirror:" + pane.current.mirror
-                                            : (Store.get("displays", "main", "") || pane.names[0]) === pane.selected ? "main" : "extended"
+                                            : pane.mainName === pane.selected ? "main" : "extended"
                 onPicked: v => {
                     if (v.startsWith("mirror:")) {
                         pane.edit("mirror", v.slice(7));
                     } else {
                         pane.edit("mirror", "");
                         if (v === "main")
-                            Store.set("displays", "main", pane.selected);
-                        else if (Store.get("displays", "main", "") === pane.selected)
+                            Store.set("displays", "main", Displays.keyOf(pane.selected));
+                        else if (Displays.mainName(Store.get("displays", "main", "")) === pane.selected)
                             Store.set("displays", "main", "");
                     }
                 }
@@ -500,6 +517,7 @@ Column {
         onDismissed: pane.revert()
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: qsTr("Keep these display settings?")
             color: Theme.text
@@ -509,6 +527,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: (pane.countdown === 1 ? qsTr("Reverting to the previous settings in 1 second.") : qsTr("Reverting to the previous settings in %1 seconds.").arg(pane.countdown))
@@ -559,7 +578,7 @@ Column {
         id: brightnessTimer
 
         interval: 60
-        onTriggered: Store.run(["sh", "-c", 'brightnessctl -q set "$1%" || sudo -n brightnessctl -q set "$1%"', "sh", String(Math.round(pane.brightness * 100))])
+        onTriggered: Store.run(["brightnessctl", "-q", "set", Math.round(pane.brightness * 100) + "%"])
     }
 
     // ---- Night Shift ----
@@ -641,6 +660,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: (pane.night.temperature ?? 4500) + " K"
                 color: Theme.textSecondary

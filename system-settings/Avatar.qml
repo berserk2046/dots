@@ -43,6 +43,7 @@ Rectangle {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         visible: face.status !== Image.Ready
         text: avatar.name.split(/\s+/).filter(w => w).slice(0, 2).map(w => w[0].toUpperCase()).join("")

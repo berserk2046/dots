@@ -104,6 +104,7 @@ Item {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: tile.hidden
                 text: qsTr("Hidden")
@@ -131,6 +132,7 @@ Item {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             width: Math.min(implicitWidth, tile.width - tile.pad * 2 - smallIcon.width - parent.spacing)
             elide: Text.ElideRight
@@ -170,6 +172,7 @@ Item {
         border.color: closeMouse.containsMouse ? "#e0443e" : Theme.border
 
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             anchors.verticalCenterOffset: -1
             text: "×"

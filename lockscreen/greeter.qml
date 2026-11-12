@@ -4,6 +4,8 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.Greetd
 import Quickshell.Wayland
+// Registers the folder's singletons (Settings, Displays), which Config.qml uses
+import qs.common
 
 // Login screen for greetd, with the same look as the lock screen. greetd starts it inside a
 // minimal Hyprland (greetd/hyprland.lua); after a successful login it starts Config.session and quits.
@@ -46,7 +48,15 @@ ShellRoot {
         failures++;
         if (Greetd.state !== GreetdState.Inactive)
             Greetd.cancelSession();
-        startSession();
+        // A moment later: greetd refuses a new session while it's still closing the cancelled one
+        restartTimer.restart();
+    }
+
+    Timer {
+        id: restartTimer
+
+        interval: 150
+        onTriggered: root.startSession()
     }
 
     function power(action) {
@@ -58,7 +68,27 @@ ShellRoot {
         Quickshell.execDetached(commands[action]);
     }
 
-    Component.onCompleted: startSession()
+    // Not before the settings are read: the account to sign in (yours) is in them. Until then
+    // Config.user is the login screen's own account ("greeter"), and a session started for that one
+    // can't be signed in to.
+    property bool started: false
+
+    function begin() {
+        if (started || !Settings.loaded)
+            return;
+        started = true;
+        startSession();
+    }
+
+    Component.onCompleted: begin()
+
+    Connections {
+        target: Settings
+
+        function onLoadedChanged() {
+            root.begin();
+        }
+    }
 
     Connections {
         target: Greetd

@@ -55,6 +55,6 @@ Column {
     }
 
     Caption {
-        text: qsTr("Click an adapter for its details and to switch between DHCP and a manual address. Changes go through net-admin.sh and dhcpcd.")
+        text: qsTr("Click an adapter for its details and to switch between DHCP and a manual address. Changes ask for an administrator's password and go through dhcpcd.")
     }
 }

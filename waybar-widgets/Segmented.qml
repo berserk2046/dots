@@ -30,6 +30,7 @@ Rectangle {
                 color: seg.current === index ? Theme.segmentSelected : "transparent"
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     text: parent.modelData
                     color: Theme.text

@@ -1,12 +1,13 @@
 // Fixed ID so `qs ipc` finds this shell wherever the folder lives.
 //@ pragma ShellId system-settings
-//@ pragma IconTheme MacTahoe-dark
 // Window class, so the Dock matches the window to system-settings.desktop
 //@ pragma AppId system-settings
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.shared
+// Settings shared with the desktop: the displays' identities (Displays), light or dark (Appearance)
+import qs.common
 
 // macOS-style System Settings for this Hyprland desktop. One instance at a time:
 //   qs -p ~/.config/system-settings -n -d
@@ -69,7 +70,7 @@ ShellRoot {
                 title: qsTr("General"),
                 glyph: Theme.iCog,
                 color: "#8e8e93",
-                keywords: "about storage date time timezone login items startup calendars hostname"
+                keywords: "about storage date time timezone login items startup calendars hostname desktop shell process memory"
             },
             {
                 id: "appearance",
@@ -83,14 +84,21 @@ ShellRoot {
                 title: qsTr("Control Center"),
                 glyph: Theme.iToggles,
                 color: "#8e8e93",
-                keywords: "menu bar waybar clock modules"
+                keywords: "menu bar clock items modules"
             },
             {
                 id: "desktopDock",
                 title: qsTr("Desktop & Dock"),
                 glyph: Theme.iDock,
                 color: "#3a3a3c",
-                keywords: "dock position magnification hide hot corners default apps browser terminal windows gaps title bars"
+                keywords: "dock desktop icons files folders grid position magnification hide each display monitors hot corners default apps browser terminal windows floating title bars"
+            },
+            {
+                id: "hyprland",
+                title: qsTr("Hyprland"),
+                glyph: Theme.iDesktop,
+                color: "#5e5ce6",
+                keywords: "borders gaps corners rounding shadows dim opacity focus follows mouse hover click animations blur pointer cursor hide tiling layout dwindle master adaptive sync vrr middle click paste num lock"
             },
             {
                 id: "displays",
@@ -104,7 +112,7 @@ ShellRoot {
                 title: qsTr("Wallpaper"),
                 glyph: Theme.iImage,
                 color: "#32ade6",
-                keywords: "background desktop picture"
+                keywords: "background desktop picture hyprpaper"
             }
         ],
         [
@@ -162,6 +170,7 @@ ShellRoot {
             "appearance": "AppearancePane.qml",
             "controlCenter": "ControlCenterPane.qml",
             "desktopDock": "DesktopDockPane.qml",
+            "hyprland": "HyprlandPane.qml",
             "displays": "DisplaysPane.qml",
             "wallpaper": "WallpaperPane.qml",
             "battery": "BatteryPane.qml",
@@ -179,12 +188,11 @@ ShellRoot {
         faceVersion++;
     }
 
-    // Text size of the whole window (also the shared waybar panels shown as panes), 1 = the bar's size.
+    // Text size of the whole window (also the menu bar panels shown as panes), 1 = the bar's size.
     readonly property real fontScale: 1.15
 
     Component.onCompleted: {
         Theme.fontScale = fontScale;
-        Theme.followScheme = true;
         refreshUser();
     }
 
@@ -325,6 +333,7 @@ ShellRoot {
                                 spacing: 1
 
                                 Text {
+                                    textFormat: Text.PlainText
                                     width: parent.width
                                     elide: Text.ElideRight
                                     text: root.fullName || Quickshell.env("USER")
@@ -335,6 +344,7 @@ ShellRoot {
                                 }
 
                                 Text {
+                                    textFormat: Text.PlainText
                                     width: parent.width
                                     elide: Text.ElideRight
                                     text: qsTr("Users & Groups")
@@ -387,6 +397,7 @@ ShellRoot {
                                         }
 
                                         Text {
+                                            textFormat: Text.PlainText
                                             anchors.left: itemTile.right
                                             anchors.leftMargin: 9
                                             anchors.right: parent.right
@@ -411,6 +422,7 @@ ShellRoot {
                         }
 
                         Text {
+                            textFormat: Text.PlainText
                             width: parent.width
                             visible: search.query !== "" && search.results.length === 0
                             topPadding: 16
@@ -465,6 +477,7 @@ ShellRoot {
                         }
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.verticalCenter: parent.verticalCenter
                             text: paneLoader.item?.pageTitle || root.currentPane.title
                             color: Theme.text

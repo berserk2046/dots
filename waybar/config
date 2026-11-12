@@ -9,7 +9,7 @@
     "modules-left": ["custom/power", "custom/app", "hyprland/submap"],
     "modules-center": ["hyprland/workspaces"],
     // System Settings → Control Center edits this list (waybar-config.py)
-    "modules-right": ["tray", "custom/spotify", "mpd", "privacy", "custom/keyboard", "custom/system", "bluetooth", "network", "pulseaudio", "backlight", "battery", "custom/notifications", "custom/date"],
+    "modules-right": ["tray", "mpris", "mpd", "privacy", "custom/keyboard", "custom/system", "bluetooth", "network", "pulseaudio", "backlight", "battery", "custom/notifications", "custom/date"],
 
     // The Arch logo stands where the Apple menu is
     "custom/power": {
@@ -39,13 +39,17 @@
         "icon-size": 15,
         "spacing": 10
     },
-    // Now playing, short; click for the Sound panel (Now Playing controls), right click to play/pause
-    "custom/spotify": {
-        "exec": "~/.config/waybar/mediaplayer.py --player spotify",
-        "format": "󰝚  {}",
-        "return-type": "json",
+    // Now playing in Spotify, short; click for the Now Playing card, right click to play/pause.
+    // waybar's own MPRIS module, so no helper script runs; hidden while Spotify isn't open.
+    "mpris": {
+        "player": "spotify",
+        "format": "󰝚  {status_icon} {dynamic}",
+        "format-stopped": "",
+        "dynamic-order": ["artist", "title"],
+        "dynamic-separator": " - ",
+        "status-icons": { "playing": "", "paused": "" },
         "max-length": 32,
-        "on-click": "~/.config/waybar-widgets/toggle.sh volume",
+        "on-click": "~/.config/waybar-widgets/toggle.sh media",
         "on-click-right": "playerctl play-pause",
         "on-scroll-up": "playerctl next",
         "on-scroll-down": "playerctl previous",
@@ -61,10 +65,13 @@
             { "type": "screenshare", "tooltip": true, "tooltip-icon-size": 20 }
         ]
     },
-    // Keyboard layout ("US"), only with more than one; click for the next one
+    // Keyboard layout ("US"), only with more than one; click for the next one. custom/app's
+    // hypr-status.py writes the file and sends signal 10 when the layout changes.
     "custom/keyboard": {
-        "exec": "~/.config/waybar/hypr-status.py keyboard",
+        "exec": "cat \"$XDG_RUNTIME_DIR/waybar/keyboard.json\" 2>/dev/null",
         "return-type": "json",
+        "interval": "once",
+        "signal": 10,
         "on-click": "hyprctl switchxkblayout all next"
     },
     // CPU and RAM; click for the System panel. Turns orange under heavy load
@@ -111,8 +118,8 @@
         // "device": "acpi_video1",
         "format": "{icon}",
         "format-icons": ["󰖨"],
-        "on-scroll-up": "sudo brightnessctl s +5%",
-        "on-scroll-down": "sudo brightnessctl s 5%-",
+        "on-scroll-up": "brightnessctl -q s +5%",
+        "on-scroll-down": "brightnessctl -q s 5%-",
         "on-click": "~/.config/waybar-widgets/toggle.sh display",
         "tooltip": false
     },
@@ -129,15 +136,16 @@
         "on-click": "~/.config/waybar-widgets/toggle.sh battery",
         "tooltip": false
     },
-    // Bell with the unread count (moon during Do Not Disturb), written by the lock screen shell.
+    // Bell with the unread count (moon during Do Not Disturb), written by the notification daemon
+    // (in desktop-shell).
     // Click: Notification Center, right click: Do Not Disturb.
     "custom/notifications": {
         "exec": "cat \"$XDG_RUNTIME_DIR/lockscreen/notifications.json\" 2>/dev/null",
         "return-type": "json",
         "interval": "once",
         "signal": 9,
-        "on-click": "qs -p ~/.config/lockscreen ipc call notifications toggle",
-        "on-click-right": "qs -p ~/.config/lockscreen ipc call notifications toggleDnd"
+        "on-click": "qs -p ~/.config/desktop-shell ipc call notifications toggle",
+        "on-click-right": "qs -p ~/.config/desktop-shell ipc call notifications toggleDnd"
     },
     // Format set in System Settings → Control Center
     "custom/date": {
@@ -153,7 +161,7 @@
         "format-disconnected": "",
         "format-stopped": "",
         "unknown-tag": "N/A",
-        "interval": 2,
+        "interval": 5,
         "max-length": 32,
         "state-icons": {
             "paused": "󰏤",

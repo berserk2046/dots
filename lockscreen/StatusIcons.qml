@@ -15,6 +15,7 @@ Row {
 
     // Moon while Do Not Disturb is on
     Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: icons.doNotDisturb
         text: Theme.iMoon
@@ -57,6 +58,7 @@ Row {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: icons.layout !== ""
         text: icons.layout
@@ -109,6 +111,7 @@ Row {
         spacing: 6
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: icons.wifiBars > 0 && icons.wifiName !== ""
             text: icons.wifiName
@@ -124,6 +127,7 @@ Row {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             visible: icons.wifiBars === 0
             text: Theme.iWifiOff
@@ -146,6 +150,7 @@ Row {
         spacing: 6
 
         Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             text: Math.round(icons.level * 100) + "%"
             color: Theme.text

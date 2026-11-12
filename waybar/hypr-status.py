@@ -2,8 +2,14 @@
 """waybar custom modules fed by Hyprland's event socket, one JSON line per change:
      hypr-status.py app       name of the focused app, from its .desktop entry (bold on the left, like macOS)
      hypr-status.py keyboard  active keyboard layout as a short code ("US"); empty, so hidden, with one layout
+The app mode also keeps the keyboard layout in $XDG_RUNTIME_DIR/waybar/keyboard.json and sends waybar
+SIGRTMIN+10 when it changes, so the custom/keyboard module can just read that file and the bar needs
+one Python process instead of two.
 """
-import glob, html, json, os, socket, subprocess, sys
+import glob, html, json, os, signal, socket, subprocess, sys
+
+# custom/keyboard's "signal" in waybar's config
+KEYBOARD_SIGNAL = 10
 
 
 def hyprctl(*args):
@@ -73,6 +79,43 @@ def keyboard():
     return {"text": html.escape(code.upper()), "tooltip": main.get("active_keymap", "")}
 
 
+def runtime_dir():
+    return os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid())
+
+
+def signal_waybar():
+    """SIGRTMIN+KEYBOARD_SIGNAL to this user's waybar, which then re-reads keyboard.json."""
+    uid = os.getuid()
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            with open("/proc/%s/comm" % pid) as f:
+                if f.read().strip() != "waybar":
+                    continue
+            if os.stat("/proc/" + pid).st_uid == uid:
+                os.kill(int(pid), signal.SIGRTMIN + KEYBOARD_SIGNAL)
+        except OSError:
+            pass
+
+
+def publish_keyboard(force=False):
+    """Writes the keyboard layout for custom/keyboard and tells waybar, if it changed."""
+    path = os.path.join(runtime_dir(), "waybar", "keyboard.json")
+    data = json.dumps(keyboard()) + "\n"
+    try:
+        with open(path) as f:
+            if f.read() == data and not force:
+                return
+    except OSError:
+        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".tmp", "w") as f:
+        f.write(data)
+    os.replace(path + ".tmp", path)
+    signal_waybar()
+
+
 def emit(value):
     sys.stdout.write(json.dumps(value) + "\n")
     sys.stdout.flush()
@@ -83,11 +126,12 @@ def main():
     names = desktop_names() if mode == "app" else {}
     if mode == "app":
         emit({"text": html.escape(app_name(hyprctl("activewindow").get("class", ""), names))})
+        # Even when unchanged: waybar may have read a file left from before this process started.
+        publish_keyboard(force=True)
     else:
         emit(keyboard())
 
-    path = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid()), "hypr",
-                        os.environ["HYPRLAND_INSTANCE_SIGNATURE"], ".socket2.sock")
+    path = os.path.join(runtime_dir(), "hypr", os.environ["HYPRLAND_INSTANCE_SIGNATURE"], ".socket2.sock")
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(path)
     buffer = b""
@@ -101,8 +145,11 @@ def main():
             event, _, data = raw.decode(errors="replace").partition(">>")
             if mode == "app" and event == "activewindow":
                 emit({"text": html.escape(app_name(data.split(",", 1)[0], names))})
-            elif mode == "keyboard" and event in ("activelayout", "configreloaded"):
-                emit(keyboard())
+            elif event in ("activelayout", "configreloaded"):
+                if mode == "app":
+                    publish_keyboard()
+                else:
+                    emit(keyboard())
 
 
 if __name__ == "__main__":

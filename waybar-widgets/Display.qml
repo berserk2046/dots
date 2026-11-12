@@ -110,8 +110,7 @@ Scope {
         id: brightnessTimer
 
         interval: 60
-        onTriggered: Quickshell.execDetached(["sh", "-c", 'brightnessctl -q set "$1%" || sudo -n brightnessctl -q set "$1%"', "sh",
-                                              String(Math.round(display.brightness * 100))])
+        onTriggered: Quickshell.execDetached(["brightnessctl", "-q", "set", Math.round(display.brightness * 100) + "%"])
     }
 
     // ---- Night Shift ----

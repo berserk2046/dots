@@ -10,6 +10,7 @@ Item {
     visible: value !== ""
 
     Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         text: parent.label
@@ -19,6 +20,7 @@ Item {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width * 0.62

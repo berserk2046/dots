@@ -73,10 +73,20 @@ Column {
             key: "mouseNaturalScroll"
         }
 
-        SwitchRow {
+        // Same setting as System Settings → Hyprland → Focus, which has a third choice
+        SettingRow {
+            id: focusRow
+
+            readonly property int mode: Store.get("hyprland", "followMouse", Store.get("pointer", "focusFollowsMouse", false) ? 1 : 0)
+
             title: qsTr("Focus follows mouse")
-            subtitle: qsTr("Hovering a window focuses it, instead of clicking it")
-            key: "focusFollowsMouse"
+            subtitle: qsTr("Hovering a window focuses it, instead of clicking it (more choices in Hyprland)")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: focusRow.mode >= 1
+                onToggled: on => Store.set("hyprland", "followMouse", on ? 1 : 0)
+            }
         }
     }
 }

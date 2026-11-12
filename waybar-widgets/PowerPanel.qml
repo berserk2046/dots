@@ -13,10 +13,10 @@ Column {
 
     // Same actions as the old fuzzel session menu. Lock before sleeping so the desktop isn't visible on wake.
     readonly property var commands: ({
-            "sleep": "qs -p ~/.config/lockscreen ipc call lock lockNow; sleep 1; systemctl suspend",
+            "sleep": "qs -p ~/.config/lockscreen ipc call lock lockForSleep; sleep 1; systemctl suspend",
             "restart": "systemctl reboot",
             "shutdown": "systemctl poweroff",
-            "lock": "qs -p ~/.config/lockscreen ipc call lock lock",
+            "lock": "qs -p ~/.config/lockscreen ipc call lock lockNow",
             "logout": "loginctl terminate-user \"$USER\""
         })
     readonly property int countdownSeconds: 60
@@ -157,6 +157,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.centerIn: parent
                     visible: face.status !== Image.Ready
                     text: (panel.fullName || panel.user).split(/\s+/).filter(w => w).slice(0, 2).map(w => w[0].toUpperCase()).join("")
@@ -176,6 +177,7 @@ Column {
                 spacing: 2
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     elide: Text.ElideRight
                     text: panel.fullName || panel.user
@@ -186,6 +188,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     elide: Text.ElideRight
                     text: [panel.host, panel.uptime > 0 ? panel.uptimeText() : ""].filter(x => x).join("  ·  ")
@@ -286,6 +289,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 12
             width: parent.width - 24
             horizontalAlignment: Text.AlignHCenter
@@ -298,6 +302,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 12
             width: parent.width - 24
             horizontalAlignment: Text.AlignHCenter

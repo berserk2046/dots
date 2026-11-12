@@ -160,8 +160,7 @@ Column {
         SettingRow {
             title: qsTr("Notification previews")
             subtitle: {
-                const previews = Store.get("notifications", "previews", "always");
-                return previews === "always" ? qsTr("Shown") : previews === "unlocked" ? qsTr("App names only") : qsTr("Hidden");
+                return Store.get("notifications", "previews", "unlocked") === "never" ? qsTr("How many arrived") : qsTr("How many arrived, and from which apps");
             }
             chevron: true
             onClicked: Ui.open("notifications")
@@ -200,7 +199,7 @@ Column {
 
         TextButton {
             text: qsTr("Lock Screen Now")
-            onClicked: Store.lockscreenIpc(["lock", "lock"])
+            onClicked: Store.lockscreenIpc(["lock", "lockNow"])
         }
     }
 }

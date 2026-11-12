@@ -1,0 +1,7 @@
+# /etc/greetd/config.toml: the login screen on tty1 is greeter.qml inside a minimal Hyprland.
+[terminal]
+vt = 1
+
+[default_session]
+command = "start-hyprland -- --config /etc/greetd/hyprland.lua"
+user = "greeter"

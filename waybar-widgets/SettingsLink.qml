@@ -16,6 +16,7 @@ Rectangle {
     color: mouse.containsMouse ? Theme.hover : "transparent"
 
     Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.leftMargin: 8
         anchors.verticalCenter: parent.verticalCenter

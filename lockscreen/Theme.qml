@@ -25,7 +25,7 @@ Singleton {
     readonly property color solidBorder: "#2c2c2e"
     readonly property color solidCircle: "#3a3a3c"
 
-    readonly property string font: "SF Pro"
+    readonly property string font: "SF Pro Text"
     readonly property string iconFont: "FiraCode Nerd Font"
 
     readonly property int panelWidth: 320

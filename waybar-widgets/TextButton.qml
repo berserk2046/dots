@@ -19,6 +19,7 @@ Rectangle {
     border.color: Theme.buttonBorder
 
     Text {
+        textFormat: Text.PlainText
         id: label
 
         anchors.centerIn: parent

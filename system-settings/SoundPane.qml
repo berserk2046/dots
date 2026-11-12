@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.shared
 
-// Sound: the waybar Sound panel (output/input volume and device, input level, Now Playing, app volumes),
+// Sound: the menu bar's Sound panel (output/input volume and device, input level, Now Playing, app volumes),
 // plus the alert sound and alert volume that notifications play (lock screen shell, through pw-play).
 Column {
     id: pane

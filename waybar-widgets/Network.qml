@@ -3,7 +3,9 @@ import Quickshell
 import Quickshell.Io
 
 // Wi-Fi through wpa_supplicant (wpa_cli, no root: the control socket belongs to `wheel`)
-// and wired interfaces through dhcpcd (net-admin.sh via `sudo -n`).
+// and wired interfaces through dhcpcd. Changes that need root go through the root-owned helper
+// /usr/local/libexec/desktop-helpers/net-admin (system/net-admin.sh, installed by system/install.sh),
+// run with pkexec: polkit asks for an administrator's password in the desktop's dialog.
 Scope {
     id: net
 
@@ -18,7 +20,8 @@ Scope {
     }
 
     readonly property string statusScript: scriptPath("net-status.sh")
-    readonly property string adminScript: scriptPath("net-admin.sh")
+    readonly property string joinScript: scriptPath("wifi-join.py")
+    readonly property string adminHelper: "/usr/local/libexec/desktop-helpers/net-admin"
 
     property string wifi: ""
     property bool wpaReachable: false
@@ -74,6 +77,9 @@ Scope {
             id: proc
 
             property var callback: null
+            // Written to the command's stdin, which is then closed (for what mustn't be an argument,
+            // where every user could read it in the process list: a password)
+            property var input: null
             property int code: -1
             property bool exitSeen: false
             property bool outputSeen: false
@@ -86,6 +92,13 @@ Scope {
                 destroy();
             }
 
+            stdinEnabled: input !== null
+            onStarted: {
+                if (input !== null) {
+                    write(input);
+                    stdinEnabled = false;
+                }
+            }
             stdout: StdioCollector {
                 id: out
 
@@ -105,10 +118,11 @@ Scope {
         }
     }
 
-    function run(command, callback) {
+    function run(command, callback, input) {
         const proc = commandComponent.createObject(net, {
             command: command,
-            callback: callback ?? null
+            callback: callback ?? null,
+            input: input ?? null
         });
         proc.running = true;
     }
@@ -118,7 +132,7 @@ Scope {
     }
 
     function admin(args, callback) {
-        run(["sudo", "-n", adminScript, ...args], callback);
+        run(["pkexec", adminHelper, ...args], callback);
     }
 
     // --- parsing ---
@@ -438,22 +452,6 @@ Scope {
             wpa(["select_network", String(id)], () => refresh());
             return;
         }
-        const script = `
-            set -e
-            id=$(wpa_cli -i "$1" add_network | tail -n 1)
-            case $id in *[!0-9]*|'') echo "add_network failed" >&2; exit 1 ;; esac
-            set_net() { out=$(wpa_cli -i "$IF" set_network "$id" "$@"); [ "$out" = OK ] || { wpa_cli -i "$IF" remove_network "$id" >/dev/null; echo "Invalid $1" >&2; exit 1; }; }
-            IF=$1
-            set_net ssid "$2"
-            case $3 in
-                open) set_net key_mgmt NONE ;;
-                sae) set_net key_mgmt SAE; set_net ieee80211w 2; set_net sae_password "\\"$4\\"" ;;
-                *) set_net psk "\\"$4\\"" ;;
-            esac
-            [ "$5" = hidden ] && set_net scan_ssid 1
-            wpa_cli -i "$IF" select_network "$id" >/dev/null
-            echo "$id"
-        `;
         const kind = !network.secured ? "open" : network.sae && !network.psk ? "sae" : "psk";
         joining = {
             ssid: network.ssid,
@@ -461,8 +459,8 @@ Scope {
             isNew: true,
             deadline: Date.now() + 25000
         };
-        run(["sh", "-c", script, "sh", wifi, ssidHex(network.ssid), kind, password ?? "", hidden ? "hidden" : ""],
-            (code, out, err) => {
+        // The password goes to wifi-join.py on stdin, and from there to wpa_supplicant's socket
+        run(["python3", "-I", joinScript, wifi], (code, out, err) => {
             if (code !== 0) {
                 joining = null;
                 joinError = {
@@ -477,7 +475,12 @@ Scope {
                     id: id
                 });
             refresh();
-        });
+        }, JSON.stringify({
+            ssid: ssidHex(network.ssid),
+            kind: kind,
+            password: password ?? "",
+            hidden: hidden === true
+        }) + "\n");
     }
 
     // Called after each status refresh while a join is in flight.
@@ -540,7 +543,9 @@ Scope {
         admin(args, (code, out, err) => {
             ethernetBusy = "";
             if (code !== 0)
-                ethernetError = err.trim().split("\n").pop() || qsTr("Failed (sudo needs a password?)");
+                // 126: the password dialog was cancelled. 127: not allowed, or the helper is missing.
+                ethernetError = code === 126 ? "" : code === 127 ? qsTr("Not allowed, or the helper isn't installed (sudo sh system/install.sh)")
+                                                                   : err.trim().split("\n").pop() || qsTr("Failed");
             refresh();
         });
     }

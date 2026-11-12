@@ -59,6 +59,32 @@ Column {
         }
     }
 
+    GroupTitle {
+        visible: Ui.subpage === ""
+        text: qsTr("Performance")
+    }
+
+    SettingsGroup {
+        visible: Ui.subpage === ""
+
+        SettingRow {
+            title: qsTr("Draw the Dock, desktop and panels with one thread")
+            subtitle: Store.get("general", "singleRenderThread", false) ? qsTr("Uses a little less memory; animations may be less smooth")
+                                                                         : qsTr("Each window is drawn by its own thread")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Store.get("general", "singleRenderThread", false)
+                onToggled: on => Store.setSingleRenderThread(on)
+            }
+        }
+    }
+
+    Caption {
+        visible: Ui.subpage === ""
+        text: qsTr("Applies right away by restarting the Dock and the desktop, which takes a second. If the Dock's magnification or the panels start to stutter, turn it off again.")
+    }
+
     // ---- About ----
 
     Loader {
@@ -125,6 +151,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 100
                     text: about.info.model ?? ""
@@ -135,6 +162,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 128
                     text: about.info.vendor ?? ""
@@ -157,7 +185,7 @@ Column {
                         onAccepted: {
                             const name = text.trim();
                             if (/^[A-Za-z0-9][A-Za-z0-9-]{0,62}$/.test(name))
-                                Store.run(["sh", "-c", 'hostnamectl set-hostname "$1" || sudo -n hostnamectl set-hostname "$1"', "sh", name]);
+                                Store.run(["hostnamectl", "set-hostname", name]);
                         }
                     }
                 }
@@ -165,6 +193,7 @@ Column {
                 SettingRow {
                     title: qsTr("Processor")
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: about.info.cpu ?? ""
                         color: Theme.textSecondary
@@ -181,6 +210,7 @@ Column {
 
                         title: qsTr("Graphics")
                         Text {
+                            textFormat: Text.PlainText
                             anchors.verticalCenter: parent.verticalCenter
                             width: Math.min(implicitWidth, 380)
                             elide: Text.ElideRight
@@ -195,6 +225,7 @@ Column {
                 SettingRow {
                     title: qsTr("Memory")
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: about.info.memory ?? ""
                         color: Theme.textSecondary
@@ -211,6 +242,7 @@ Column {
 
                         title: qsTr("Display")
                         Text {
+                            textFormat: Text.PlainText
                             anchors.verticalCenter: parent.verticalCenter
                             width: Math.min(implicitWidth, 400)
                             elide: Text.ElideRight
@@ -238,6 +270,7 @@ Column {
 
                         title: modelData[0]
                         Text {
+                            textFormat: Text.PlainText
                             anchors.verticalCenter: parent.verticalCenter
                             text: about.info[infoRow.modelData[1]] ?? ""
                             color: Theme.textSecondary
@@ -250,6 +283,7 @@ Column {
                 SettingRow {
                     title: qsTr("Up for")
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: about.uptime(about.info.uptime)
                         color: Theme.textSecondary
@@ -286,7 +320,7 @@ Column {
             SettingsGroup {
                 SettingRow {
                     visible: system.disks.length === 0
-                    title: system.loaded ? qsTr("No disks found") : qsTr("Calculating…")
+                    title: system.infoLoaded ? qsTr("No disks found") : qsTr("Calculating…")
                     titleColor: Theme.textSecondary
                 }
 
@@ -380,8 +414,9 @@ Column {
             function saveCalendars(list) {
                 calendars = list;
                 const text = list.map(c => [c.url, c.color, c.name].filter(x => x).join(" ")).join("\n") + "\n";
-                // Private: the addresses give read access to the calendars.
-                Store.writeFile(calendarFile, text, ["chmod", "600", calendarFile]);
+                // Private (mode 600 from the moment it's created): the addresses give read access to
+                // the calendars.
+                Store.writeFile(calendarFile, text, null, null, true);
             }
 
             Component.onCompleted: {
@@ -407,7 +442,7 @@ Column {
                         checked: dateTime.ntp
                         onToggled: on => {
                             dateTime.ntp = on;
-                            Store.runQueued("ntp", ["sh", "-c", 'timedatectl set-ntp "$1" || sudo -n timedatectl set-ntp "$1"', "sh", String(on)], () => dateTime.refresh());
+                            Store.runQueued("ntp", ["timedatectl", "set-ntp", String(on)], () => dateTime.refresh());
                         }
                     }
                 }
@@ -416,6 +451,7 @@ Column {
                     title: qsTr("Date and time")
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: dateTime.now.toLocaleString(Qt.locale(), "dddd, MMMM d, yyyy  h:mm:ss AP")
                         color: Theme.textSecondary
@@ -433,7 +469,7 @@ Column {
                         value: dateTime.timezone
                         onPicked: zone => {
                             dateTime.timezone = zone;
-                            Store.run(["sh", "-c", 'timedatectl set-timezone "$1" || sudo -n timedatectl set-timezone "$1"', "sh", zone], () => dateTime.refresh());
+                            Store.run(["timedatectl", "set-timezone", zone], () => dateTime.refresh());
                         }
                     }
                 }
@@ -507,6 +543,7 @@ Column {
                 onDismissed: dateTime.adding = false
 
                 Text {
+                    textFormat: Text.PlainText
                     text: qsTr("Add Calendar")
                     color: Theme.text
                     font.family: Theme.font
@@ -672,6 +709,7 @@ Column {
                 onDismissed: login.adding = false
 
                 Text {
+                    textFormat: Text.PlainText
                     text: qsTr("Add Login Item")
                     color: Theme.text
                     font.family: Theme.font

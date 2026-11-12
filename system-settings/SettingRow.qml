@@ -79,6 +79,7 @@ Item {
             spacing: 2
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 elide: Text.ElideRight
                 text: row.title
@@ -88,6 +89,7 @@ Item {
             }
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 visible: row.subtitle !== ""
                 elide: Text.ElideRight

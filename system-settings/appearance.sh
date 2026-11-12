@@ -1,11 +1,17 @@
 #!/bin/sh
 # Applies Appearance settings to GTK (gsettings for GTK 4/libadwaita, settings.ini for GTK 3, the
 # theme's gtk-4.0 CSS linked into ~/.config/gtk-4.0 for libadwaita)
-# Hyprland (cursor, title bar colors) and waybar's colors:
+# and Hyprland (cursor, title bar colors):
 #   appearance.sh scheme dark|light     color scheme; swaps a -Dark/-Light GTK theme to its other variant
 #   appearance.sh gtk <theme>
 #   appearance.sh icons <theme>
 #   appearance.sh cursor <theme> <size>
+#   appearance.sh font "<family> <size>"         apps' interface font
+#   appearance.sh mono "<family> <size>"         apps' monospace font
+#   appearance.sh scale <factor>                 text size, 1.0 = normal
+#   appearance.sh smoothing none|grayscale|rgba  font antialiasing (rgba: subpixel)
+#   appearance.sh hinting none|slight|medium|full
+# Qt apps follow GTK's fonts too (QT_QPA_PLATFORMTHEME=gtk3 in hyprland.lua).
 set -u
 schema=org.gnome.desktop.interface
 
@@ -96,8 +102,28 @@ cursor)
     ini gtk-cursor-theme-size "$3"
     hyprctl setcursor "$2" "$3" >/dev/null
     ;;
+font)
+    gsettings set $schema font-name "$2"
+    ini gtk-font-name "$2"
+    ;;
+mono)
+    gsettings set $schema monospace-font-name "$2"
+    ;;
+scale)
+    gsettings set $schema text-scaling-factor "$2"
+    ;;
+smoothing)
+    gsettings set $schema font-antialiasing "$2"
+    if [ "$2" = none ]; then ini gtk-xft-antialias 0; else ini gtk-xft-antialias 1; fi
+    if [ "$2" = rgba ]; then ini gtk-xft-rgba rgb; else ini gtk-xft-rgba none; fi
+    ;;
+hinting)
+    gsettings set $schema font-hinting "$2"
+    if [ "$2" = none ]; then ini gtk-xft-hinting 0; else ini gtk-xft-hinting 1; fi
+    ini gtk-xft-hintstyle "hint$2"
+    ;;
 *)
-    echo "usage: $0 scheme dark|light | gtk <theme> | icons <theme> | cursor <theme> <size>" >&2
+    echo "usage: $0 scheme dark|light | gtk <theme> | icons <theme> | cursor <theme> <size> | font <name> | mono <name> | scale <factor> | smoothing <mode> | hinting <style>" >&2
     exit 1
     ;;
 esac

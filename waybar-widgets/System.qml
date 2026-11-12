@@ -2,8 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// CPU, memory, disks, battery and busy processes, from sys-status.sh. Polls only while `active`;
-// otherwise it samples just /proc/stat for the CPU graph.
+// CPU, memory, battery and busy processes from sys-status.sh; disks, energy mode and charge limit from
+// sys-info.sh, less often. Polls only while `active`; otherwise it reads just /proc/stat for the CPU graph.
 Scope {
     id: sys
 
@@ -22,7 +22,8 @@ Scope {
     property string cpuModel: ""
     property real uptime: 0
     property var load: [0, 0, 0]
-    property real temperature: -1 // °C
+    property real temperature: -1 // the processor's, in °C; -1 without a sensor
+    property real gpuTemperature: -1 // the graphics card's (the hottest, with several)
 
     // CPU usage 0..1 since the previous poll, split like Activity Monitor.
     property real cpuUser: 0
@@ -56,11 +57,20 @@ Scope {
     // Battery power draw is averaged over the last few polls so the time estimate doesn't jump.
     property var powerSamples: []
 
+    // Disks, energy mode, charge limit and CPU model barely change, so they're read less often.
+    property int infoInterval: 30000
+    readonly property string infoScript: scriptPath("sys-info.sh")
+
     onActiveChanged: {
         if (active) {
             profileError = "";
             chargeError = "";
+            // Process CPU use is the change between two runs: take a second one shortly after the
+            // first, so the list fills in right away (the old samples are too old to compare with).
+            previousProcs = null;
             refresh();
+            refreshInfo();
+            firstSample.restart();
         }
     }
 
@@ -71,24 +81,43 @@ Scope {
         onTriggered: sys.refresh()
     }
 
-    // While closed, keep sampling just the CPU counters so the graph has history when opened.
     Timer {
-        interval: sys.interval
-        repeat: true
-        running: !sys.active
-        onTriggered: statProc.running = true
+        id: firstSample
+
+        interval: 500
+        onTriggered: sys.refresh()
     }
 
-    Process {
-        id: statProc
+    Timer {
+        interval: Math.max(sys.interval, sys.infoInterval)
+        repeat: true
+        running: sys.active
+        onTriggered: sys.refreshInfo()
+    }
 
-        command: ["grep", "^cpu", "/proc/stat"]
-        stdout: StdioCollector {
-            onStreamFinished: sys.applyStat(text.split("\n").filter(l => l.trim() !== ""))
+    // While closed, keep sampling just the CPU counters so the graph has history when opened, five
+    // times less often than while open (each point is then the average since the last one). Read
+    // directly, without starting a program.
+    Timer {
+        interval: sys.interval * 5
+        repeat: true
+        running: !sys.active
+        onTriggered: statFile.reload()
+    }
+
+    FileView {
+        id: statFile
+
+        path: "/proc/stat"
+        printErrors: false
+        onLoaded: {
+            if (!sys.active)
+                sys.applyStat(text().split("\n").filter(l => l.startsWith("cpu")));
         }
     }
 
     property bool busy: false
+    property bool infoBusy: false
 
     Process {
         id: statusProc
@@ -102,11 +131,30 @@ Scope {
         }
     }
 
+    Process {
+        id: infoProc
+
+        command: ["sh", sys.infoScript]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                sys.infoBusy = false;
+                sys.applyInfo(text);
+            }
+        }
+    }
+
     function refresh() {
         if (busy)
             return;
         busy = true;
         statusProc.running = true;
+    }
+
+    function refreshInfo() {
+        if (infoBusy)
+            return;
+        infoBusy = true;
+        infoProc.running = true;
     }
 
     Process {
@@ -118,7 +166,7 @@ Scope {
         onExited: code => {
             if (code !== 0)
                 sys.profileError = profileErr.text.trim().split("\n").pop() || qsTr("Couldn't change the energy mode");
-            sys.refresh();
+            sys.refreshInfo();
         }
     }
 
@@ -139,7 +187,7 @@ Scope {
         onExited: code => {
             if (code !== 0)
                 sys.chargeError = chargeErr.text.trim().split("\n").pop() || qsTr("Couldn't change the charge limit");
-            sys.refresh();
+            sys.refreshInfo();
         }
     }
 
@@ -186,14 +234,17 @@ Scope {
         return sections;
     }
 
+    // From sys-status.sh: CPU, memory, temperature, battery and processes.
     function apply(text) {
         const s = parseSections(text);
         if (!s.end)
             return;
-        cpuModel = (s.cpu ?? [""])[0].replace(/ with .*$/, "").replace(/\(\w+\)/g, "").trim();
         uptime = parseFloat((s.uptime ?? ["0"])[0]);
         load = ((s.load ?? [""])[0].split(" ").slice(0, 3)).map(Number);
-        temperature = s.temp?.length ? parseInt(s.temp[0]) / 1000 : -1;
+        // "cpu 47250", "gpu 45000" (thousandths of a degree)
+        const temps = kind => (s.temp ?? []).filter(l => l.startsWith(kind + " ")).map(l => parseInt(l.split(" ")[1]) / 1000).filter(t => t > 0);
+        temperature = temps("cpu")[0] ?? -1;
+        gpuTemperature = temps("gpu").length ? Math.max(...temps("gpu")) : -1;
 
         applyStat(s.stat ?? []);
 
@@ -209,6 +260,21 @@ Scope {
         swapTotal = mem.SwapTotal ?? 0;
         swapUsed = swapTotal - (mem.SwapFree ?? 0);
 
+        applyBattery(s.battery ?? []);
+        applyProcs(s.procs ?? [], s.stat ?? []);
+        loaded = true;
+    }
+
+    // From sys-info.sh: CPU model, disks, energy mode and charge limit.
+    property bool infoLoaded: false
+
+    function applyInfo(text) {
+        const s = parseSections(text);
+        if (!s.end)
+            return;
+        cpuModel = (s.cpu ?? [""])[0].replace(/ with .*$/, "").replace(/\(\w+\)/g, "").trim();
+        pageSize = parseInt((s.pagesize ?? [""])[0]) || 4096;
+
         disks = (s.disks ?? []).map(line => {
             const p = line.split(" ");
             return {
@@ -222,8 +288,6 @@ Scope {
             };
         });
 
-        applyBattery(s.battery ?? []);
-
         const json = (lines, i) => {
             try {
                 return JSON.parse(lines?.[i] ?? "").data;
@@ -236,29 +300,66 @@ Scope {
         chargeDevice = s["charge@"] ?? "";
         chargeLimitSupported = json(s.charge, 0) === true;
         chargeLimitEnabled = json(s.charge, 1) === true;
+        infoLoaded = true;
+    }
 
+    // Each process's CPU time at the previous run ("pid starttime" -> clock ticks), and the CPU
+    // counters' total then, to turn the change into a percentage of one core, as top does.
+    property var previousProcs: null
+    property real previousProcTotal: 0
+    property int pageSize: 4096
+
+    // `lines` are /proc/<pid>/stat lines, `statLines` the /proc/stat cpu lines read with them.
+    function applyProcs(lines, statLines) {
+        let total = 0;
+        let cores = 0;
+        for (const line of statLines) {
+            const p = line.trim().split(/\s+/);
+            if (p[0] === "cpu")
+                total = p.slice(1, 9).reduce((a, b) => a + Number(b), 0);
+            else
+                cores++;
+        }
+        // Clock ticks that passed per core since the previous run
+        const elapsed = previousProcs && cores > 0 ? (total - previousProcTotal) / cores : 0;
+        const now = {};
         const byApp = {};
-        for (const line of s.procs ?? []) {
-            const [pid, cpu, rss, ...rest] = line.split("\t");
-            const comm = rest.join("\t");
+        for (const line of lines) {
+            // "pid (comm) state ...": comm can hold spaces and parentheses, so split around the last ")".
+            const open = line.indexOf("(");
+            const close = line.lastIndexOf(")");
+            if (open < 0 || close < open)
+                continue;
+            const f = line.slice(close + 2).split(" "); // f[0] is field 3 (state)
+            const id = line.slice(0, open - 1) + " " + f[19]; // pid and start time, in case a pid is reused
+            const ticks = Number(f[11]) + Number(f[12]); // utime + stime
+            now[id] = ticks;
+            const comm = line.slice(open + 1, close);
             const key = processAliases[comm] ?? comm;
             const entry = byApp[key] ?? {
                 key: key,
                 cpu: 0,
                 mem: 0
             };
-            entry.cpu += parseFloat(cpu) || 0;
-            entry.mem += (parseFloat(rss) || 0) * 1024;
+            const before = previousProcs?.[id];
+            if (elapsed > 0 && before !== undefined)
+                entry.cpu += Math.max(0, ticks - before) / elapsed * 100;
+            entry.mem += (Number(f[21]) || 0) * pageSize; // rss, in pages
             byApp[key] = entry;
         }
-        processes = Object.values(byApp).filter(p => p.cpu > 0).sort((a, b) => b.cpu - a.cpu).map(p => {
+        const first = previousProcs === null;
+        previousProcs = now;
+        previousProcTotal = total;
+        // Nothing to compare with yet: keep the last list until the next run.
+        if (first)
+            return;
+        processes = Object.values(byApp).filter(p => p.cpu > 0).sort((a, b) => b.cpu - a.cpu).slice(0, 12).map(p => {
             const entry = DesktopEntries.heuristicLookup(p.key);
             return Object.assign(p, {
                 name: entry?.name || p.key,
                 icon: entry?.icon || ""
             });
         });
-        loaded = true;
     }
 
     function applyStat(lines) {
@@ -368,5 +469,13 @@ Scope {
         return h > 0 ? qsTr("%1 h %2 min").arg(h).arg(m) : qsTr("%1 min").arg(m);
     }
 
-    Component.onCompleted: refresh()
+    Component.onCompleted: {
+        if (active) {
+            refresh();
+            refreshInfo();
+            firstSample.restart();
+        } else {
+            statFile.reload();
+        }
+    }
 }

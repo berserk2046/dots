@@ -107,6 +107,7 @@ Item {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         visible: slider.minLabel !== ""
@@ -117,6 +118,7 @@ Item {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         visible: slider.maxLabel !== ""

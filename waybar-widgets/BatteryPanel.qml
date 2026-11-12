@@ -77,6 +77,7 @@ Column {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 text: qsTr("Battery")
                 color: Theme.text
                 font.family: Theme.font
@@ -85,6 +86,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 text: panel.bat ? (panel.bat.acOnline ? qsTr("Power Source: Power Adapter") : qsTr("Power Source: Battery")) : ""
                 color: Theme.textSecondary
                 font.family: Theme.font
@@ -93,6 +95,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.right: parent.right
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -105,6 +108,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         visible: panel.sys.loaded && !panel.bat
         text: qsTr("No battery found")
@@ -145,6 +149,7 @@ Column {
             spacing: 2
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 elide: Text.ElideRight
                 text: panel.timeText()
@@ -155,6 +160,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 visible: text !== ""
                 elide: Text.ElideRight
@@ -264,6 +270,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 8
             width: parent.width - 16
             visible: panel.sys.profileError !== ""
@@ -299,6 +306,7 @@ Column {
                 spacing: 2
 
                 Text {
+                    textFormat: Text.PlainText
                     text: qsTr("Battery Conservation")
                     color: Theme.text
                     font.family: Theme.font
@@ -306,6 +314,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     wrapMode: Text.WordWrap
                     text: qsTr("Stops charging before full to extend battery life")
@@ -327,6 +336,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 8
             width: parent.width - 16
             visible: panel.sys.chargeError !== ""
@@ -358,6 +368,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         height: 26
         visible: panel.sys.loaded && !panel.sys.processes.some(p => p.cpu >= panel.significantCpu)

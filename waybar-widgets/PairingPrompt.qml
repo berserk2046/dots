@@ -12,6 +12,7 @@ Column {
     spacing: 10
 
     Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.WordWrap
         text: {
@@ -37,6 +38,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.WordWrap
         visible: text !== ""
@@ -56,6 +58,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.horizontalCenter: parent.horizontalCenter
         visible: prompt.request?.passkey !== undefined
         text: (prompt.request?.passkey ?? "").replace(/(\d{3})(\d{3})/, "$1 $2")

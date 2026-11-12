@@ -12,6 +12,7 @@ Item {
     height: 30
 
     Text {
+        textFormat: Text.PlainText
         anchors.left: parent.left
         anchors.leftMargin: 4
         anchors.bottom: parent.bottom

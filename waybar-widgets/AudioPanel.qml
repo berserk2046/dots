@@ -79,13 +79,6 @@ Column {
             node.audio.muted = false;
     }
 
-    function formatTime(seconds) {
-        if (!(seconds >= 0) || !isFinite(seconds))
-            return "0:00";
-        const s = Math.floor(seconds);
-        return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
-    }
-
     // Volume and mute are only available for nodes bound by a tracker.
     PwObjectTracker {
         objects: [...panel.sinks, ...panel.sources, ...panel.streams]
@@ -99,6 +92,7 @@ Column {
     }
 
     component Percent: Text {
+        textFormat: Text.PlainText
         property PwNode node
 
         width: 34
@@ -109,35 +103,6 @@ Column {
         font.pixelSize: Theme.fontSize(11)
         font.features: {
             "tnum": 1
-        }
-    }
-
-    component MediaButton: Rectangle {
-        id: mediaButton
-
-        property string glyph
-        property int size: 18
-        signal clicked
-
-        width: 30
-        height: 30
-        radius: 15
-        opacity: enabled ? 1 : 0.35
-        color: buttonMouse.pressed ? Theme.pressed : buttonMouse.containsMouse ? Theme.hover : "transparent"
-
-        Glyph {
-            anchors.centerIn: parent
-            text: mediaButton.glyph
-            size: mediaButton.size
-        }
-
-        MouseArea {
-            id: buttonMouse
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: mediaButton.clicked()
         }
     }
 
@@ -169,6 +134,7 @@ Column {
         height: 34
 
         Text {
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.leftMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -248,6 +214,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         visible: panel.sinks.length === 0
         height: 28
@@ -307,6 +274,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         visible: panel.sources.length === 0
         height: 28
@@ -331,184 +299,12 @@ Column {
     Repeater {
         model: panel.players
 
-        Item {
-            id: player
-
+        PlayerCard {
             required property MprisPlayer modelData
-            readonly property MprisPlayer p: modelData
-            readonly property bool hasLength: p.lengthSupported && p.length > 0
 
+            p: modelData
+            shown: panel.shown
             width: panel.width
-            height: 64 + (hasLength ? 18 : 0)
-
-            // MPRIS doesn't push position updates; ask for them while visible.
-            Timer {
-                interval: 1000
-                repeat: true
-                running: panel.shown && player.p.isPlaying && player.p.positionSupported
-                onTriggered: player.p.positionChanged()
-            }
-
-            ClippingRectangle {
-                id: art
-
-                x: 8
-                y: 8
-                width: 48
-                height: 48
-                radius: 8
-                color: Theme.circle
-
-                Glyph {
-                    anchors.centerIn: parent
-                    visible: cover.status !== Image.Ready
-                    text: Theme.iMusic
-                    size: 22
-                    color: Theme.textSecondary
-                }
-
-                Image {
-                    id: cover
-
-                    anchors.fill: parent
-                    source: player.p.trackArtUrl ?? ""
-                    fillMode: Image.PreserveAspectCrop
-                    sourceSize.width: 96
-                    sourceSize.height: 96
-                    asynchronous: true
-                    visible: status === Image.Ready
-                }
-            }
-
-            Column {
-                anchors.left: art.right
-                anchors.leftMargin: 10
-                anchors.right: controls.left
-                anchors.rightMargin: 6
-                anchors.verticalCenter: art.verticalCenter
-                spacing: 1
-
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: player.p.trackTitle || player.p.identity
-                    color: Theme.text
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fontSize(13)
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: player.p.trackArtist || player.p.trackAlbum || player.p.identity
-                    color: Theme.textSecondary
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fontSize(12)
-                }
-
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    visible: (player.p.trackArtist || player.p.trackAlbum) !== ""
-                    text: player.p.identity
-                    color: Theme.textTertiary
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fontSize(11)
-                }
-            }
-
-            Row {
-                id: controls
-
-                anchors.right: parent.right
-                anchors.rightMargin: 4
-                anchors.verticalCenter: art.verticalCenter
-
-                MediaButton {
-                    glyph: Theme.iPrevious
-                    enabled: player.p.canGoPrevious
-                    onClicked: player.p.previous()
-                }
-                MediaButton {
-                    glyph: player.p.isPlaying ? Theme.iPause : Theme.iPlay
-                    size: 22
-                    enabled: player.p.canTogglePlaying
-                    onClicked: player.p.togglePlaying()
-                }
-                MediaButton {
-                    glyph: Theme.iNext
-                    enabled: player.p.canGoNext
-                    onClicked: player.p.next()
-                }
-            }
-
-            // Progress; click to seek.
-            Item {
-                visible: player.hasLength
-                anchors.top: art.bottom
-                anchors.topMargin: 6
-                x: 8
-                width: parent.width - 16
-                height: 14
-
-                Text {
-                    id: elapsed
-
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 34
-                    text: panel.formatTime(player.p.position)
-                    color: Theme.textTertiary
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fontSize(10)
-                    font.features: {
-                        "tnum": 1
-                    }
-                }
-
-                Rectangle {
-                    id: bar
-
-                    anchors.left: elapsed.right
-                    anchors.right: total.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: 4
-                    radius: 2
-                    color: Theme.track
-
-                    Rectangle {
-                        width: parent.width * Math.max(0, Math.min(1, player.p.position / player.p.length))
-                        height: parent.height
-                        radius: 2
-                        color: Theme.textSecondary
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        enabled: player.p.canSeek
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: event => player.p.position = player.p.length * Math.max(0, Math.min(1, (event.x - 6) / bar.width))
-                    }
-                }
-
-                Text {
-                    id: total
-
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 34
-                    horizontalAlignment: Text.AlignRight
-                    text: panel.formatTime(player.p.length)
-                    color: Theme.textTertiary
-                    font.family: Theme.font
-                    font.pixelSize: Theme.fontSize(10)
-                    font.features: {
-                        "tnum": 1
-                    }
-                }
-            }
         }
     }
 
@@ -561,6 +357,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.left: appIcon.right
                 anchors.leftMargin: 10
                 anchors.right: parent.right

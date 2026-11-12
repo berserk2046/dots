@@ -37,6 +37,7 @@ Rectangle {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             visible: !(card.player?.trackArtUrl)
             text: Theme.iMusic
@@ -55,6 +56,7 @@ Rectangle {
         spacing: 2
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: card.player?.trackTitle ?? ""
             elide: Text.ElideRight
@@ -65,6 +67,7 @@ Rectangle {
         }
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: card.player?.trackArtist ?? ""
             elide: Text.ElideRight
@@ -90,6 +93,7 @@ Rectangle {
             ]
 
             Text {
+                textFormat: Text.PlainText
                 required property var modelData
 
                 width: 30

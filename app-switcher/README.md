@@ -27,30 +27,25 @@ the switcher is open, and each key reaches the switcher as a global shortcut,
 commits by itself once it sees the submap end. The panel appears 90 ms after Alt+Tab, so a quick Alt+Tab
 switches without flashing it.
 
-The actions can also be called from a shell, which is handy for scripts or other bindings:
-
-```sh
-qs -p ~/.config/app-switcher ipc call switcher next      # also: previous left right up down commit cancel close
-```
-
 ## Run
 
-Started from `hyprland.lua` with the rest of the desktop:
+The switcher runs inside `desktop-shell`, together with the Dock, the menu bar panels, the desktop and the
+notifications; `SwitcherShell.qml` is what it loads. The actions can also be called from a shell, which is handy
+for scripts or other bindings:
 
-```lua
-hl.on("hyprland.start", function()
-    hl.exec_cmd("qs -p ~/.config/app-switcher")
-end)
+```sh
+qs -p ~/.config/desktop-shell ipc call switcher next      # also: previous left right up down commit cancel close
 ```
 
 ## Configure
 
 - System Settings → Desktop & Dock → Window Switcher: previews or icons, and windows from all workspaces
   or only the current one. Saved under `switcher` in `~/.config/system-settings/settings.json`
-  (`previews`, `scope`: `"all"` or `"workspace"`) and read by `Settings.qml`; changes apply right away.
+  (`previews`, `scope`: `"all"` or `"workspace"`) and read by `Settings` (`shell-common`); changes apply right
+  away.
 - Keys: the "Window switcher" block in `hyprland.lua`.
 - Colors and font: `Theme.qml`. Tile sizes, spacing and the radius: the top of `Switcher.qml`.
-- Icon theme: the `//@ pragma IconTheme` line in `shell.qml`, which System Settings → Appearance rewrites.
+- Icon theme: System Settings → Appearance, which restarts `desktop-shell` with it.
 
-Live reload is off for this shell (`settings.watchFiles` in `shell.qml`). After editing it, restart it:
-`qs kill -p ~/.config/app-switcher; qs -p ~/.config/app-switcher -d`.
+After editing these files, restart the shell:
+`qs kill -p ~/.config/desktop-shell; qs -p ~/.config/desktop-shell -d`.

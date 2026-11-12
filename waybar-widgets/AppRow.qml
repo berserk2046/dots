@@ -40,6 +40,7 @@ Item {
     }
 
     Text {
+        textFormat: Text.PlainText
         anchors.left: icon.right
         anchors.leftMargin: 10
         anchors.right: values.left
@@ -61,6 +62,7 @@ Item {
         spacing: 10
 
         Text {
+            textFormat: Text.PlainText
             visible: row.detail !== ""
             text: row.detail
             color: Theme.textTertiary
@@ -72,6 +74,7 @@ Item {
         }
 
         Text {
+            textFormat: Text.PlainText
             text: row.value
             color: Theme.textSecondary
             font.family: Theme.font

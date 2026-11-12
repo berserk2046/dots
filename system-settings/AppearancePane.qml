@@ -1,8 +1,9 @@
 import QtQuick
 import Quickshell.Widgets
 import qs.shared
+import qs.common
 
-// Appearance: light/dark/auto for apps, GTK theme, icon theme (also the Dock's) and pointer.
+// Appearance: light/dark/auto for apps, GTK theme, icon theme (also the Dock's), pointer and apps' fonts.
 Column {
     id: pane
 
@@ -19,6 +20,42 @@ Column {
     readonly property string iconTheme: Store.get("appearance", "iconTheme", current.icons ?? "MacTahoe-dark")
     readonly property string cursorTheme: Store.get("appearance", "cursorTheme", current.cursors ?? "default")
     readonly property int cursorSize: Store.get("appearance", "cursorSize", Number(current.size) || 24)
+
+    // Fonts: installed families (list-fonts.sh) and what apps use now (gsettings), as "<family> <size>".
+    // Saved under "fonts" rather than "appearance", whose changes also reload Hyprland's config.
+    property var uiFonts: []
+    property var monoFonts: []
+    property var fontsNow: ({})
+    readonly property var uiFont: splitFont(Store.get("fonts", "font", fontsNow["font-name"] ?? "Adwaita Sans 11"))
+    readonly property var monoFont: splitFont(Store.get("fonts", "monoFont", fontsNow["monospace-font-name"] ?? "Adwaita Mono 11"))
+    readonly property real textScale: Store.get("fonts", "textScale", Number(fontsNow["text-scaling-factor"]) || 1)
+    readonly property var fontSizes: [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map(n => ({
+                label: n + " pt",
+                value: n
+            }))
+
+    function splitFont(name) {
+        const m = /^(.*\S)\s+(\d+(?:\.\d+)?)$/.exec(name ?? "");
+        return m ? {
+            family: m[1],
+            size: Number(m[2])
+        } : {
+            family: name ?? "",
+            size: 11
+        };
+    }
+
+    // key: "font" or "monoFont" (also appearance.sh's command: "font" or "mono")
+    function setFont(key, family, size) {
+        const name = family + " " + size;
+        Store.set("fonts", key, name);
+        Store.appearance([key === "font" ? "font" : "mono", name]);
+    }
+
+    function setFontOption(key, value) {
+        Store.set("fonts", key, value);
+        Store.appearance([key, value]);
+    }
 
     spacing: 10
 
@@ -44,6 +81,24 @@ Column {
             pane.current = current;
         });
         loadPreview();
+        Store.run(["sh", Store.script("list-fonts.sh")], (code, out) => {
+            const ui = [];
+            const mono = [];
+            const now = {};
+            for (const line of out.split("\n")) {
+                const eq = line.indexOf("=");
+                const [key, value] = [line.slice(0, eq), line.slice(eq + 1)];
+                if (key === "ui")
+                    ui.push(value);
+                else if (key === "mono")
+                    mono.push(value);
+                else if (key.startsWith("current-"))
+                    now[key.slice(8)] = value;
+            }
+            pane.uiFonts = ui;
+            pane.monoFonts = mono;
+            pane.fontsNow = now;
+        });
     }
 
     onIconThemeChanged: loadPreview()
@@ -61,7 +116,7 @@ Column {
 
     // Light/dark may have swapped the GTK theme for its other variant, here or from the Dock's Auto.
     Connections {
-        target: Theme
+        target: Appearance
 
         function onSchemeChanged() {
             Store.run(["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"], (code, out) => {
@@ -170,6 +225,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             text: tile.label
             color: pane.mode === tile.mode ? Theme.text : Theme.textSecondary
@@ -260,7 +316,7 @@ Column {
     }
 
     Caption {
-        text: qsTr("Changing icons restarts the Dock and the lock screen shell (your notifications are kept). More themes: install them to ~/.themes and ~/.local/share/icons, e.g. MacTahoe-gtk-theme or WhiteSur-gtk-theme from the AUR.")
+        text: qsTr("Changing icons restarts the Dock, the window switcher and the lock screen shell (your notifications are kept). More themes: install them to ~/.themes and ~/.local/share/icons, e.g. MacTahoe-gtk-theme or WhiteSur-gtk-theme from the AUR.")
     }
 
     GroupTitle {
@@ -300,6 +356,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 anchors.verticalCenter: parent.verticalCenter
                 text: pane.cursorSize + " px"
                 color: Theme.textSecondary
@@ -307,6 +364,129 @@ Column {
                 font.pixelSize: Theme.fontSize(12)
             }
         }
+    }
+
+    // ---- Fonts ----
+
+    GroupTitle {
+        text: qsTr("Fonts")
+    }
+
+    SettingsGroup {
+        SettingRow {
+            title: qsTr("Interface font")
+            subtitle: qsTr("Menus, buttons and text in apps")
+
+            Dropdown {
+                anchors.verticalCenter: parent.verticalCenter
+                options: pane.uiFonts
+                value: pane.uiFont.family
+                onPicked: family => pane.setFont("font", family, pane.uiFont.size)
+            }
+
+            Dropdown {
+                anchors.verticalCenter: parent.verticalCenter
+                options: pane.fontSizes
+                value: pane.uiFont.size
+                onPicked: size => pane.setFont("font", pane.uiFont.family, size)
+            }
+        }
+
+        SettingRow {
+            title: qsTr("Monospaced font")
+            subtitle: qsTr("Code and text editors in apps that use it")
+
+            Dropdown {
+                anchors.verticalCenter: parent.verticalCenter
+                options: pane.monoFonts
+                value: pane.monoFont.family
+                onPicked: family => pane.setFont("monoFont", family, pane.monoFont.size)
+            }
+
+            Dropdown {
+                anchors.verticalCenter: parent.verticalCenter
+                options: pane.fontSizes
+                value: pane.monoFont.size
+                onPicked: size => pane.setFont("monoFont", pane.monoFont.family, size)
+            }
+        }
+
+        SettingRow {
+            title: qsTr("Text size")
+            below: SettingSlider {
+                width: parent.width
+                from: 0.8
+                to: 1.5
+                step: 0.05
+                minLabel: qsTr("Smaller")
+                maxLabel: qsTr("Larger")
+                value: pane.textScale
+                onMoved: v => scaleTimer.restartWith(Math.round(v * 100) / 100)
+            }
+
+            Text {
+                textFormat: Text.PlainText
+                anchors.verticalCenter: parent.verticalCenter
+                text: Math.round(pane.textScale * 100) + " %"
+                color: Theme.textSecondary
+                font.family: Theme.font
+                font.pixelSize: Theme.fontSize(12)
+            }
+        }
+
+        SettingRow {
+            id: smoothingRow
+
+            readonly property var modes: ["none", "grayscale", "rgba"]
+
+            title: qsTr("Font smoothing")
+            subtitle: qsTr("Subpixel is sharper on most LCD screens")
+
+            Segmented {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 260
+                options: [qsTr("Off"), qsTr("Grayscale"), qsTr("Subpixel")]
+                current: smoothingRow.modes.indexOf(Store.get("fonts", "smoothing", pane.fontsNow["font-antialiasing"] ?? "grayscale"))
+                onPicked: index => pane.setFontOption("smoothing", smoothingRow.modes[index])
+            }
+        }
+
+        SettingRow {
+            id: hintingRow
+
+            readonly property var styles: ["none", "slight", "medium", "full"]
+
+            title: qsTr("Hinting")
+            subtitle: qsTr("Fits letters to the pixel grid")
+
+            Segmented {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 280
+                options: [qsTr("None"), qsTr("Slight"), qsTr("Medium"), qsTr("Full")]
+                current: hintingRow.styles.indexOf(Store.get("fonts", "hinting", pane.fontsNow["font-hinting"] ?? "slight"))
+                onPicked: index => pane.setFontOption("hinting", hintingRow.styles[index])
+            }
+        }
+    }
+
+    Caption {
+        text: qsTr("For GTK and Qt apps; open apps may need a restart to pick up a new font. The menu bar, the Dock, the panels and title bars keep SF Pro, which they're designed around, and the terminal (foot) has its own font in foot.ini.")
+    }
+
+    // Text size: applied once the slider rests, so dragging doesn't make every app redo its layout.
+    Timer {
+        id: scaleTimer
+
+        property real scale: 1
+
+        function restartWith(v) {
+            scale = v;
+            Store.set("fonts", "textScale", v);
+            restart();
+        }
+
+        interval: 300
+        onTriggered: Store.appearance(["scale", String(scale)])
     }
 
     // Apply the size once the slider rests, so dragging doesn't flood hyprctl.

@@ -84,6 +84,7 @@ Item {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     x: 22
                     width: parent.width - 28
                     anchors.verticalCenter: parent.verticalCenter

@@ -36,7 +36,9 @@ Scope {
     }
 
     Process {
-        command: ["busctl", "--user", "monitor", "--json=short", "--match",
+        // Through setpriv, so the monitor ends with the shell however the shell ends. Left to itself it
+        // stayed behind whenever the shell was killed or crashed, one more each time.
+        command: ["setpriv", "--pdeathsig", "TERM", "busctl", "--user", "monitor", "--json=short", "--match",
             "type='signal',interface='com.canonical.Unity.LauncherEntry',member='Update'"]
         running: true
         stdout: SplitParser {

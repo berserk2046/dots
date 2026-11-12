@@ -2,6 +2,7 @@ import QtQuick
 import Qt.labs.folderlistmodel
 import Quickshell
 import qs.shared
+import qs.common
 
 // Wallpaper: pick a picture from your wallpaper folders, how it fits, and which display gets it.
 // Set through hyprpaper (Store.writeWallpaper); the lock screen uses it too unless it has its own.
@@ -16,7 +17,8 @@ Column {
     readonly property var folders: Store.get("wallpaper", "folders", [Store.home + "/Pictures/Wallpapers"])
     readonly property string fit: Store.get("wallpaper", "fit", "cover")
     readonly property var perMonitor: Store.get("wallpaper", "monitors", {})
-    readonly property string current: target !== "" && perMonitor[target] ? perMonitor[target]
+    // Per display, by monitor (make, model and serial, see Displays; older files used the port name)
+    readonly property string current: target !== "" && Displays.pick(perMonitor, target) ? Displays.pick(perMonitor, target)
                                                                          : Store.get("wallpaper", "path", Store.defaultWallpaper)
 
     spacing: 10
@@ -36,10 +38,13 @@ Column {
             });
         } else {
             const next = Object.assign({}, perMonitor);
-            next[target] = path;
+            const key = Displays.keyOf(target);
+            next[key] = path;
+            if (key !== target)
+                delete next[target];
             Store.set("wallpaper", "monitors", next);
         }
-        Store.writeWallpaper(monitorNames);
+        Store.writeWallpaper();
     }
 
     function fileName(path) {
@@ -82,6 +87,7 @@ Column {
                 spacing: 10
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     elide: Text.ElideMiddle
                     text: pane.fileName(pane.current)
@@ -95,6 +101,7 @@ Column {
                     spacing: 8
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("Fit")
                         color: Theme.textSecondary
@@ -120,7 +127,7 @@ Column {
                         value: pane.fit
                         onPicked: v => {
                             Store.set("wallpaper", "fit", v);
-                            Store.writeWallpaper(pane.monitorNames);
+                            Store.writeWallpaper();
                         }
                     }
                 }
@@ -130,6 +137,7 @@ Column {
                     visible: pane.monitorNames.length > 1
 
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         text: qsTr("Show on")
                         color: Theme.textSecondary
@@ -154,6 +162,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width
                     wrapMode: Text.WordWrap
                     text: Store.get("lockScreen", "wallpaper", "") ? qsTr("The lock screen has its own picture (Lock Screen settings).")
@@ -162,6 +171,26 @@ Column {
                     font.family: Theme.font
                     font.pixelSize: Theme.fontSize(11)
                 }
+            }
+        }
+    }
+
+    // ---- Who draws it ----
+
+    SettingsGroup {
+        SettingRow {
+            id: drawRow
+
+            readonly property bool on: Store.get("desktop", "drawWallpaper", true)
+
+            title: qsTr("Draw the wallpaper with the desktop")
+            subtitle: drawRow.on ? qsTr("Together with the desktop's icons, in one process, using less memory than hyprpaper")
+                                 : qsTr("hyprpaper draws it, in its own process")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: drawRow.on
+                onToggled: on => Store.setDesktop("drawWallpaper", on)
             }
         }
     }

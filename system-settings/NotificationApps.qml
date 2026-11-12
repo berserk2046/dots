@@ -57,12 +57,12 @@ Scope {
     }
 
     function refreshDnd() {
-        Store.lockscreenIpc(["notifications", "isDnd"], (code, out) => apps.doNotDisturb = out.trim() === "true");
+        Store.desktopIpc(["notifications", "isDnd"], (code, out) => apps.doNotDisturb = out.trim() === "true");
     }
 
     function setDnd(on) {
         doNotDisturb = on;
-        Store.runQueued("dnd", ["qs", "-p", Store.lockscreenDir, "ipc", "call", "notifications", "setDnd", on ? "true" : "false"], () => refreshDnd());
+        Store.runQueued("dnd", ["qs", "-p", Store.desktopShellDir, "ipc", "call", "notifications", "setDnd", on ? "true" : "false"], () => refreshDnd());
     }
 
     Component.onCompleted: refreshDnd()

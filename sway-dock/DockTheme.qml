@@ -1,15 +1,14 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Io
+import qs.common
 
 // Dock colors, light or dark following the GTK color scheme that System Settings → Appearance sets
 // (as on macOS, the Dock turns light frosted glass in Light mode; Hyprland blurs behind it).
 Singleton {
     id: theme
 
-    property string scheme: "" // org.gnome.desktop.interface color-scheme
-    readonly property bool light: scheme === "prefer-light"
+    readonly property bool light: Appearance.light
 
     // The same glass as the menu bar (bar_bg and border in waybar's colors-light.css / colors-dark.css)
     readonly property color bar: light ? "#9ef6f6f6" : "#e6000000"
@@ -24,13 +23,4 @@ Singleton {
     readonly property color indicator: light ? "#cc000000" : "#ffffff"
     readonly property color indicatorDim: light ? "#59000000" : "#88ffffff"
     readonly property color dropHighlight: light ? "#26000000" : "#40ffffff"
-
-    Process {
-        running: true
-        command: ["sh", "-c", "gsettings get org.gnome.desktop.interface color-scheme; gsettings monitor org.gnome.desktop.interface color-scheme"]
-        stdout: SplitParser {
-            // "'prefer-dark'" from get, "color-scheme: 'prefer-dark'" from monitor
-            onRead: line => theme.scheme = line.replace(/^color-scheme:\s*/, "").replace(/'/g, "").trim()
-        }
-    }
 }

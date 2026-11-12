@@ -214,6 +214,7 @@ PanelWindow {
 
         // Icon mode: the selected window's name under its icon, kept inside the card
         Text {
+            textFormat: Text.PlainText
             id: label
 
             readonly property Item target: highlight.target

@@ -1,22 +1,26 @@
 #!/bin/sh
 # Installs these dotfiles on Arch + Hyprland.
-# Usage: ./install.sh [--copy] [--no-packages]
+# Usage: ./install.sh [--copy] [--no-packages] [--no-helpers]
 #   --copy         copy the folders into ~/.config instead of symlinking them to this repo
 #   --no-packages  skip installing packages
+#   --no-helpers   skip installing the root-owned helpers and their polkit policy (system/install.sh);
+#                  Ethernet settings and the login screen then can't be changed from System Settings
 # Existing folders in ~/.config are moved to <name>.bak-<date> first.
 set -eu
 
 repo=$(cd "$(dirname "$0")" && pwd)
 config=${XDG_CONFIG_HOME:-$HOME/.config}
-dirs="hypr lockscreen sway-dock app-switcher waybar waybar-widgets system-settings"
+dirs="hypr lockscreen waybar sway-dock app-switcher waybar-widgets desktop notifications polkit-agent shell-common desktop-shell system-settings"
 stamp=$(date +%Y%m%d-%H%M%S)
 copy=false
 packages=true
+helpers=true
 
 for arg in "$@"; do
     case "$arg" in
         --copy) copy=true ;;
         --no-packages) packages=false ;;
+        --no-helpers) helpers=false ;;
         *) echo "Unknown option: $arg" >&2; exit 1 ;;
     esac
 done
@@ -26,13 +30,15 @@ pacman_pkgs="hyprland quickshell waybar hyprpaper hypridle hyprsunset
     foot fuzzel yazi grim hyprshot playerctl brightnessctl
     pipewire wireplumber libpulse power-profiles-daemon upower mpd mpc
     wpa_supplicant bluez bluez-utils
-    python python-gobject python-dbus glib2 libnotify xdg-utils
+    python python-gobject python-dbus glib2 libnotify xdg-utils polkit
     ttf-firacode-nerd curl 7zip fontconfig"
 # AUR
 aur_pkgs="pwvucontrol"
 
-# SF Pro and SF Pro Rounded, straight from Apple into ~/.local/share/fonts/SF-Pro. (The AUR's
+# SF Pro Text, Display and Rounded, straight from Apple into ~/.local/share/fonts/SF-Pro. (The AUR's
 # apple-fonts breaks whenever Apple updates the download, since its checksums stop matching.)
+# Only the separate faces: the two "SF Pro" variable fonts (20 MB each, every style in one file) are
+# left out, since every program that used one kept all of it in memory.
 install_sf_pro() {
     if fc-list | grep -q 'SF Pro Rounded'; then
         echo "    SF Pro already installed"
@@ -47,7 +53,8 @@ install_sf_pro() {
     payload=$(find "$tmp/dmg" -name Payload -path '*.pkg/*' | head -n 1)
     [ -n "$payload" ] && (cd "$(dirname "$payload")" && 7z x Payload -y >/dev/null && 7z x 'Payload~' -y >/dev/null) &&
         mkdir -p "$HOME/.local/share/fonts/SF-Pro" &&
-        find "$tmp/dmg" -path '*/Library/Fonts/*' \( -name '*.otf' -o -name '*.ttf' \) -exec cp {} "$HOME/.local/share/fonts/SF-Pro/" \; &&
+        find "$tmp/dmg" -path '*/Library/Fonts/*' \( -name '*.otf' -o -name '*.ttf' \) ! -name 'SF-Pro.ttf' ! -name 'SF-Pro-Italic.ttf' \
+            -exec cp {} "$HOME/.local/share/fonts/SF-Pro/" \; &&
         fc-cache -f "$HOME/.local/share/fonts" >/dev/null
     status=$?
     rm -rf "$tmp"
@@ -74,6 +81,11 @@ if have=$(pacman -Q hyprland 2>/dev/null | cut -d' ' -f2) && [ "$(vercmp "$have"
     echo "Warning: Hyprland $have is installed; this config was written for 0.56 or newer." >&2
 fi
 
+if $helpers; then
+    echo "==> Installing the root-owned helpers and their polkit policy (sudo)"
+    sudo sh "$repo/system/install.sh" || echo "Warning: couldn't install the helpers; run it later: sudo sh $repo/system/install.sh" >&2
+fi
+
 echo "==> Linking folders into $config"
 mkdir -p "$config"
 for d in $dirs; do
@@ -96,16 +108,30 @@ for d in $dirs; do
     echo "    $d -> $target"
     # Keep this machine's settings (they're not in git) from the old folder
     if [ -n "$backup" ]; then
-        for f in system-settings/settings.json hypr/hypridle.conf hypr/hyprpaper.conf hypr/hyprsunset.conf hypr/system-settings.lua; do
+        for f in system-settings/settings.json hypr/hypridle.conf hypr/hyprpaper.conf hypr/hyprsunset.conf hypr/system-settings.lua waybar/colors.css; do
             case "$f" in "$d"/*) ;; *) continue ;; esac
             name=${f#"$d"/}
-            if [ -f "$backup/$name" ] && [ ! -f "$target/$name" ]; then
+            # Yours wins over a copy that happens to be in the repo folder (they aren't in git)
+            if [ -f "$backup/$name" ]; then
                 cp "$backup/$name" "$target/$name"
                 echo "    kept your $f"
             fi
         done
     fi
 done
+
+# The menu bar's colors: waybar's style.css imports colors.css, which System Settings → Appearance
+# replaces with colors-light.css or colors-dark.css. It changes with your choice, so it isn't in git.
+[ -f "$config/waybar/colors.css" ] || cp "$config/waybar/colors-dark.css" "$config/waybar/colors.css"
+
+# An hypridle.conf from before lockForSleep: lock at once before sleep, and hold the sleep back until
+# the screen is locked. (System Settings → Lock Screen writes it this way from now on.)
+idle=$config/hypr/hypridle.conf
+if [ -f "$idle" ] && grep -q 'before_sleep_cmd = .* ipc call lock lockNow$' "$idle"; then
+    sed -i 's/\(before_sleep_cmd = .* ipc call lock \)lockNow$/\1lockForSleep/' "$idle"
+    grep -q 'inhibit_sleep' "$idle" || sed -i '/before_sleep_cmd = /a\    inhibit_sleep = 3' "$idle"
+    echo "    updated $idle (lock before sleep)"
+fi
 
 # App launcher entry for System Settings
 mkdir -p "$HOME/.local/share/applications"
@@ -118,7 +144,8 @@ mkdir -p "$wallpapers"
 # Written by System Settings → Lock Screen; changes here are overwritten.
 general {
     lock_cmd = qs -p $config/lockscreen ipc call lock lock
-    before_sleep_cmd = qs -p $config/lockscreen ipc call lock lockNow
+    before_sleep_cmd = qs -p $config/lockscreen ipc call lock lockForSleep
+    inhibit_sleep = 3
     after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "on" })'
 }
 EOF
@@ -152,6 +179,6 @@ Done. Next steps:
   - Wi-Fi uses wpa_supplicant (wpa_cli). With NetworkManager or iwd the Wi-Fi panels stay empty.
   - Optional title bars, from inside Hyprland:
       hyprpm add https://github.com/hyprwm/hyprland-plugins && hyprpm enable hyprbars
-  - Optional login screen:  sudo sh $repo/lockscreen/greetd/install.sh
+  - Optional login screen:  sudo /usr/local/libexec/desktop-helpers/greetd-install
   - Log out and back in (or reload Hyprland with Super+Shift+R).
 EOF

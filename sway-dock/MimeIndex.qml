@@ -24,6 +24,9 @@ Scope {
                 const id = a.replace(/\.desktop$/, "").replace(/\//g, "-").toLowerCase();
                 if (!(id in apps))
                     apps[id] = (b || "").split(";").filter(type => type.length > 0);
+                // Zathura's file types live in its plugins' entries (org.pwmt.zathura-pdf-mupdf, -djvu, -ps, -cb…)
+                if (id.startsWith("org.pwmt.zathura-"))
+                    apps["org.pwmt.zathura"] = (apps["org.pwmt.zathura"] || []).concat(apps[id]);
             } else if (kind === "S" && b) {
                 (parentMap[a] = parentMap[a] || []).push(b);
             } else if (kind === "L" && b) {
@@ -109,7 +112,7 @@ Scope {
     Process {
         id: indexProcess
 
-        command: ["sh", Quickshell.shellPath("mime-index.sh")]
+        command: ["sh", decodeURIComponent(Qt.resolvedUrl("mime-index.sh").toString().replace(/^file:\/\//, ""))]
         running: true
         stdout: StdioCollector {
             onStreamFinished: root.parseIndex(text)

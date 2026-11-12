@@ -7,7 +7,7 @@ Column {
 
     property string pageTitle: ""
 
-    // waybar module -> name and icon, in menu bar order
+    // item -> name and icon, in menu bar order
     readonly property var modules: [
         {
             id: "tray",
@@ -16,7 +16,7 @@ Column {
             color: "#8e8e93"
         },
         {
-            id: "custom/spotify",
+            id: "mpris",
             title: qsTr("Now Playing (Spotify)"),
             glyph: Theme.iMusic,
             color: "#1db954"
@@ -82,7 +82,8 @@ Column {
             color: "#ff453a"
         }
     ]
-    readonly property var hidden: Store.get("controlCenter", "hidden", [])
+    // "custom/spotify" was the Now Playing module's name before it became waybar's own "mpris".
+    readonly property var hidden: Store.get("controlCenter", "hidden", []).map(id => id === "custom/spotify" ? "mpris" : id)
     readonly property var clock: Store.get("controlCenter", "clock", {})
 
     spacing: 10
@@ -140,7 +141,7 @@ Column {
     }
 
     Caption {
-        text: qsTr("Waybar reloads right away. The Arch menu and the app name stay on the left, the workspaces in the middle and the clock at the end.")
+        text: qsTr("Applies right away. The Arch menu and the app name stay on the left, the workspaces in the middle and the clock at the end.")
     }
 
     GroupTitle {

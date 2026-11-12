@@ -3,6 +3,7 @@ import qs.shared
 
 // Small gray explanation under a group or row.
 Text {
+    textFormat: Text.PlainText
     width: parent?.width ?? 0
     leftPadding: 4
     rightPadding: 4

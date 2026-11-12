@@ -65,6 +65,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: panel.disp.timeLabel(stepper.time)
             color: Theme.text
@@ -101,6 +102,7 @@ Column {
         height: 34
 
         Text {
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.leftMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -129,6 +131,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             id: brightnessPercent
 
             anchors.right: parent.right
@@ -147,6 +150,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         height: 28
         visible: panel.disp.brightness < 0
@@ -219,6 +223,7 @@ Column {
                 height: 26
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: parent.modelData.label
@@ -246,6 +251,7 @@ Column {
         text: qsTr("Color Temperature")
 
         Text {
+            textFormat: Text.PlainText
             text: panel.night.temperature + " K"
             color: Theme.textSecondary
             font.family: Theme.font
@@ -270,6 +276,7 @@ Column {
         height: 18
 
         Text {
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             text: qsTr("Less Warm")
@@ -279,6 +286,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: qsTr("More Warm")

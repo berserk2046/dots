@@ -43,11 +43,9 @@ Column {
 
             Dropdown {
                 anchors.verticalCenter: parent.verticalCenter
+                // The lock screen never shows what a notification says, only how many arrived and
+                // from which apps ("always", from older settings, now means the same as "unlocked").
                 options: [
-                    {
-                        label: qsTr("Always"),
-                        value: "always"
-                    },
                     {
                         label: qsTr("When Unlocked"),
                         value: "unlocked"
@@ -57,7 +55,7 @@ Column {
                         value: "never"
                     }
                 ]
-                value: Store.get("notifications", "previews", "always")
+                value: Store.get("notifications", "previews", "unlocked") === "never" ? "never" : "unlocked"
                 onPicked: v => Store.set("notifications", "previews", v)
             }
         }
@@ -104,7 +102,7 @@ Column {
 
                 onClicked: {
                     if (confirming) {
-                        Store.lockscreenIpc(["notifications", "clearAll"]);
+                        Store.desktopIpc(["notifications", "clearAll"]);
                         confirming = false;
                     } else {
                         confirming = true;
@@ -237,7 +235,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: qsTr("Clear")
                 enabled: apps.countFor(pane.appName) > 0
-                onClicked: Store.lockscreenIpc(["notifications", "clearApp", pane.appName])
+                onClicked: Store.desktopIpc(["notifications", "clearApp", pane.appName])
             }
         }
     }

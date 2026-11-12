@@ -18,6 +18,7 @@ macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `blue
 - Pick the output/input device; paired Bluetooth speakers/headphones that aren't connected are
   listed too and connect on click
 - Now Playing for MPRIS players: art, title, artist, previous/play/next, click the bar to seek
+- Spotify item on the bar: a larger Now Playing card; click the title or artist to open them in Spotify. Shows the previous and next song once logged in to the Web API (see `spotify-queue.py`)
 - Per-app volume for everything playing
 
 **Bluetooth** (`BluetoothPanel.qml`)
@@ -25,7 +26,8 @@ macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `blue
 - Your devices: click to connect or disconnect, spinner while it happens, battery when the device reports it
 - Nearby devices (the first six; System Settings lists them all): click to pair and connect, again to cancel.
   While the panel is open it's the pairing agent (`BluetoothPairing.qml`, `bt-agent.py`, shared with System
-  Settings), so a code to confirm or a PIN to type shows up inline (`PairingPrompt.qml`)
+  Settings), so a code to confirm or a PIN to type shows up inline (`PairingPrompt.qml`). A device is trusted
+  only once you've confirmed its code, and one you haven't paired has to ask before using a service
 - Bluetooth Settings… opens System Settings → Bluetooth
 
 **Battery** (`BatteryPanel.qml`, `System.qml`)
@@ -39,7 +41,7 @@ macOS Control Center style dropdowns for waybar's `network`, `pulseaudio`, `blue
 - Using Significant Energy: apps above 10% CPU right now
 
 **System** (`SystemPanel.qml`, `System.qml`) for the combined CPU + RAM module (`waybar-system.sh`)
-- CPU: usage graph (system red, user blue, like Activity Monitor), per-core bars, temperature, load
+- CPU: usage graph (system red, user blue, like Activity Monitor), per-core bars, load, CPU and GPU temperature
 - Memory: used (colored by pressure) and cached, memory pressure, swap
 - Storage: per disk, a bar with available and total space
 - Top processes by CPU, helper processes counted as their app (e.g. Firefox)
@@ -85,29 +87,30 @@ a few hours to reflect changes in the iCal feed. Repeating events use python-dat
 as a matplotlib dependency); without it they show only their first occurrence. If an address leaks,
 use "Reset" next to it in Google's settings.
 
-Battery and system data come from sysfs, `/proc`, `df` and `top` (`sys-status.sh`), polled only while
-one of the two panels is open; the CPU graph keeps sampling `/proc/stat` in the background.
+Battery and system data are polled only while one of the two panels is open: `sys-status.sh` every 2 seconds
+(CPU, memory, battery and every process's CPU time from sysfs and `/proc`, with shell built-ins only, so it
+starts no programs), `sys-info.sh` on opening and every 30 seconds (disks, energy mode, charge limit). The CPU
+graph keeps reading `/proc/stat` in the background (every 10 seconds while closed), without starting a program.
 
 Wi-Fi goes through `wpa_cli` (no root: the control socket is group `wheel`) and changes are saved with
-`save_config` (needs `update_config=1`, already set). IP addressing is left to `dhcpcd`. Ethernet changes
-and the rfkill fallback run `net-admin.sh` through `sudo -n`. Manual IPv4 settings are written as a marked
+`save_config` (needs `update_config=1`, already set). A new network's password goes from the panel to
+`wifi-join.py` on its input and from there straight to wpa_supplicant's socket, never as an argument of a
+command (where any user could read it in the process list). IP addressing is left to `dhcpcd`. Ethernet changes
+and the rfkill fallback run the root-owned helper `/usr/local/libexec/desktop-helpers/net-admin`
+(`system/net-admin.sh`) through `pkexec`, which asks for an administrator's password. Manual IPv4 settings are written as a marked
 `# >>> waybar-widgets <iface>` block at the end of `/etc/dhcpcd.conf`, with a one-time backup at
 `/etc/dhcpcd.conf.waybar-widgets.bak`. Sound uses Quickshell's PipeWire, MPRIS and Bluetooth services.
 No extra packages are needed.
 
 ## Run
 
-waybar's `on-click` runs `~/.config/waybar-widgets/toggle.sh wifi|volume|bluetooth|battery|system|display|power|date`, which starts the
-shell on the first click.
-To start it with Hyprland instead (in `hyprland.lua`):
+The panels run inside `desktop-shell`, which loads `WidgetsShell.qml`. One window shows whichever panel is open,
+and a panel only exists while it's open: it's built when its icon is clicked and thrown away once closed, so the
+panels cost nothing at login or while closed. waybar's `on-click` runs
+`~/.config/waybar-widgets/toggle.sh wifi|volume|bluetooth|battery|system|display|power|date|media`.
 
-```lua
-hl.on("hyprland.start", function()
-    hl.exec_cmd("qs -p ~/.config/waybar-widgets")
-end)
-```
-
-IPC: `qs -p ~/.config/waybar-widgets ipc call wifi|volume|bluetooth|battery|system|display|power|date toggle|open|close`
+IPC: `qs -p ~/.config/desktop-shell ipc call panel toggle|open <name>`, `panel toggleAt <name> <x> <y>`,
+`panel close`.
 
 The card opens under the pointer, so under the icon you clicked. Esc or a click outside closes it.
 
@@ -117,9 +120,9 @@ to the QML files, so they work from either shell. Its Control Center pane picks 
 
 ## Configure
 
-- Colors, font (`SF Pro`), glyphs and width: `Theme.qml`; `fontScale` there multiplies every text size
+- Colors, font (`SF Pro Text`), glyphs and width: `Theme.qml`; `fontScale` there multiplies every text size
   (System Settings sets its own in its `shell.qml`)
-- Wi-Fi interface: `wifiInterface` on `Network` in `shell.qml` (empty picks the first wireless one)
+- Wi-Fi interface: `wifiInterface` on `Network` in `WidgetsShell.qml` (empty picks the first wireless one)
 - Profile picture: any square image at `~/.face` (`cp picture.png ~/.face`); it's re-read each time
-  the power menu opens. Your full name comes from the account's GECOS field (`sudo chfn -f "Name" $USER`)
+  the power menu opens. Your full name comes from the account's GECOS field (System Settings → Users & Groups)
 - Position fallback when the pointer can't be read: `fallbackRightMargin` in `Popup.qml`

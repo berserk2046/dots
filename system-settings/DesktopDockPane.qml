@@ -1,18 +1,58 @@
 import QtQuick
 import Quickshell
 import qs.shared
+import qs.common
 
-// Desktop & Dock: the Dock (size, magnification, position, auto-hide, indicators), default apps,
-// windows (floating, title bars, gaps, corners), the window switcher (Alt+Tab) and Hot Corners (own page).
+// Desktop & Dock: the Dock (size, magnification, position, auto-hide, indicators; per display on its
+// own page), the desktop's files and folders (the desktop folder's shell), default apps, windows (floating, title bars; the rest is in the Hyprland pane), the window
+// switcher (Alt+Tab) and Hot Corners (own page).
 Column {
     id: pane
 
-    property string pageTitle: Ui.subpage === "hotCorners" ? qsTr("Hot Corners") : ""
+    property string pageTitle: Ui.subpage === "hotCorners" ? qsTr("Hot Corners") : Ui.subpage === "dockDisplays" ? qsTr("Dock on Each Display") : ""
     property var defaults: ({})
 
     readonly property int iconSize: Store.get("dock", "iconSize", 40)
     readonly property bool magnification: Store.get("dock", "magnification", true)
     readonly property int maxIconSize: Store.get("dock", "maxIconSize", 64)
+
+    // Per display, by monitor (make, model and serial, see Displays; older files used the port name):
+    // {enabled, custom, iconSize, magnification, maxIconSize, position, autoHide},
+    // read by the Dock's shell.qml. Values a display can have of its own, and their defaults:
+    readonly property var dockMonitors: Store.get("dock", "monitors", {})
+    readonly property var displayKeys: ({
+            iconSize: 40,
+            magnification: true,
+            maxIconSize: 64,
+            position: "bottom",
+            autoHide: false
+        })
+
+    function setMonitor(name, values) {
+        const next = Object.assign({}, dockMonitors);
+        const key = Displays.keyOf(name);
+        next[key] = Object.assign({}, Displays.pick(dockMonitors, name) ?? {}, values);
+        // Saved under the port name by an older version: moved to the monitor's own key
+        if (key !== name)
+            delete next[name];
+        Store.set("dock", "monitors", next);
+    }
+
+    // Own settings on: start from what every display uses (or this display's earlier own values),
+    // so nothing moves until one is changed.
+    function setCustom(name, on) {
+        const values = {
+            custom: on
+        };
+        if (on) {
+            const own = Displays.pick(dockMonitors, name) ?? {};
+            for (const key in displayKeys) {
+                if (own[key] === undefined || own[key] === null)
+                    values[key] = Store.get("dock", key, displayKeys[key]);
+            }
+        }
+        setMonitor(name, values);
+    }
 
     spacing: 10
 
@@ -129,6 +169,112 @@ Column {
                 onToggled: on => Store.set("dock", "showIndicators", on)
             }
         }
+
+        SettingRow {
+            title: qsTr("Show only windows on the Dock's display")
+            subtitle: qsTr("With several displays, each Dock lists the apps open on its own display")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Store.get("dock", "ownWindowsOnly", false)
+                onToggled: on => Store.set("dock", "ownWindowsOnly", on)
+            }
+        }
+
+        SettingRow {
+            title: qsTr("Dock on Each Display…")
+            subtitle: {
+                const of = s => Displays.pick(pane.dockMonitors, s.name);
+                const off = Quickshell.screens.filter(s => of(s)?.enabled === false).length;
+                const own = Quickshell.screens.filter(s => of(s)?.enabled !== false && of(s)?.custom === true).length;
+                const parts = [];
+                if (off > 0)
+                    parts.push(off === 1 ? qsTr("Off on 1 display") : qsTr("Off on %1 displays").arg(off));
+                if (own > 0)
+                    parts.push(own === 1 ? qsTr("own settings on 1 display") : qsTr("own settings on %1 displays").arg(own));
+                return parts.length > 0 ? parts.join(", ") : qsTr("Turn it off, or give it its own size and position, per display");
+            }
+            glyph: Theme.iMonitor
+            tileColor: "#0a84ff"
+            chevron: true
+            onClicked: Ui.openSub("dockDisplays")
+        }
+    }
+
+    // ---- Desktop ----
+
+    GroupTitle {
+        visible: Ui.subpage === ""
+        text: qsTr("Desktop")
+    }
+
+    SettingsGroup {
+        id: desktopGroup
+
+        readonly property bool shown: Store.get("desktop", "showIcons", true)
+
+        visible: Ui.subpage === ""
+
+        SettingRow {
+            title: qsTr("Show files and folders on the desktop")
+            subtitle: qsTr("From ~/Desktop, on every display; each monitor keeps its own arrangement")
+
+            Toggle {
+                anchors.verticalCenter: parent.verticalCenter
+                checked: desktopGroup.shown
+                onToggled: on => Store.setDesktop("showIcons", on)
+            }
+        }
+
+        SettingRow {
+            visible: desktopGroup.shown
+            title: qsTr("Icon size")
+            below: SettingSlider {
+                width: parent.width
+                from: 32
+                to: 96
+                step: 4
+                minLabel: qsTr("Small")
+                maxLabel: qsTr("Large")
+                value: Store.get("desktop", "iconSize", 56)
+                onMoved: v => Store.setDesktop("iconSize", v)
+            }
+        }
+
+        SettingRow {
+            visible: desktopGroup.shown
+            title: qsTr("Grid spacing")
+            below: SettingSlider {
+                width: parent.width
+                from: 0
+                to: 40
+                step: 2
+                minLabel: qsTr("Tight")
+                maxLabel: qsTr("Wide")
+                value: Store.get("desktop", "gridSpacing", 12)
+                onMoved: v => Store.setDesktop("gridSpacing", v)
+            }
+        }
+
+        SettingRow {
+            visible: desktopGroup.shown
+            title: qsTr("Text size")
+
+            Dropdown {
+                anchors.verticalCenter: parent.verticalCenter
+                options: [10, 11, 12, 13, 14].map(n => ({
+                            label: n + " pt",
+                            value: n
+                        }))
+                value: Store.get("desktop", "textSize", 12)
+                onPicked: v => Store.setDesktop("textSize", v)
+            }
+        }
+    }
+
+    Caption {
+        visible: Ui.subpage === "" && desktopGroup.shown
+        text: qsTr("Drag items to arrange them, also onto another display. Right-click the desktop for New Folder, Clean Up and more.")
     }
 
     GroupTitle {
@@ -201,46 +347,12 @@ Column {
         }
 
         SettingRow {
-            title: qsTr("Gaps around tiled windows")
-            below: SettingSlider {
-                width: parent.width
-                from: 0
-                to: 24
-                step: 1
-                minLabel: qsTr("None")
-                maxLabel: "24 px"
-                value: Store.get("windows", "gapsOut", 0)
-                onMoved: v => Store.setMany("windows", {
-                        gapsOut: v,
-                        gapsIn: Math.round(v / 2)
-                    })
-            }
-        }
-
-        SettingRow {
-            title: qsTr("Window corners")
-            below: SettingSlider {
-                width: parent.width
-                from: 0
-                to: 20
-                step: 1
-                minLabel: qsTr("Square")
-                maxLabel: qsTr("Round")
-                value: Store.get("windows", "rounding", 10)
-                onMoved: v => pane.setWindows("rounding", v)
-            }
-        }
-
-        SettingRow {
-            title: qsTr("Border width")
-
-            Segmented {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 180
-                options: ["0", "1", "2", "3"]
-                current: Store.get("windows", "borderSize", 1)
-                onPicked: index => pane.setWindows("borderSize", index)
-            }
+            title: qsTr("Borders, Corners, Gaps and Focus…")
+            subtitle: qsTr("Hyprland settings")
+            glyph: Theme.iDesktop
+            tileColor: "#5e5ce6"
+            chevron: true
+            onClicked: Ui.open("hyprland")
         }
     }
 
@@ -286,6 +398,144 @@ Column {
             chevron: true
             onClicked: Ui.openSub("hotCorners")
         }
+    }
+
+    // ---- Dock on each display ----
+
+    component DisplayDock: Column {
+        id: display
+
+        required property var modelData // a connected screen
+        readonly property string name: modelData.name
+        readonly property var own: Displays.pick(pane.dockMonitors, name) ?? {}
+        readonly property bool shown: own.enabled !== false
+        readonly property bool custom: own.custom === true
+
+        // This display's own value, or the one every display uses
+        function value(key) {
+            return custom && own[key] !== undefined && own[key] !== null ? own[key] : Store.get("dock", key, pane.displayKeys[key]);
+        }
+
+        readonly property int iconSize: value("iconSize")
+        readonly property bool magnification: value("magnification")
+        readonly property int maxIconSize: value("maxIconSize")
+
+        width: pane.width
+        spacing: 10
+
+        GroupTitle {
+            text: display.modelData.model ? display.name + " · " + display.modelData.model : display.name
+        }
+
+        SettingsGroup {
+            SettingRow {
+                title: qsTr("Show the Dock on this display")
+                subtitle: display.modelData.width + " × " + display.modelData.height
+
+                Toggle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: display.shown
+                    onToggled: on => pane.setMonitor(display.name, {
+                            enabled: on
+                        })
+                }
+            }
+
+            SettingRow {
+                visible: display.shown
+                title: qsTr("Use its own settings")
+                subtitle: display.custom ? qsTr("Size, magnification, position and hiding below") : qsTr("Off: the same as the Dock settings on the previous page")
+
+                Toggle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: display.custom
+                    onToggled: on => pane.setCustom(display.name, on)
+                }
+            }
+
+            SettingRow {
+                visible: display.shown && display.custom
+                title: qsTr("Size")
+                below: SettingSlider {
+                    width: parent.width
+                    from: 24
+                    to: 80
+                    step: 2
+                    minLabel: qsTr("Small")
+                    maxLabel: qsTr("Large")
+                    value: display.iconSize
+                    onMoved: v => pane.setMonitor(display.name, {
+                            iconSize: v,
+                            maxIconSize: Math.max(display.maxIconSize, v)
+                        })
+                }
+            }
+
+            SettingRow {
+                visible: display.shown && display.custom
+                title: qsTr("Magnification")
+                below: SettingSlider {
+                    width: parent.width
+                    visible: display.magnification
+                    from: display.iconSize
+                    to: 128
+                    step: 2
+                    minLabel: qsTr("Small")
+                    maxLabel: qsTr("Large")
+                    value: display.maxIconSize
+                    onMoved: v => pane.setMonitor(display.name, {
+                            maxIconSize: v
+                        })
+                }
+
+                Toggle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: display.magnification
+                    onToggled: on => pane.setMonitor(display.name, {
+                            magnification: on
+                        })
+                }
+            }
+
+            SettingRow {
+                visible: display.shown && display.custom
+                title: qsTr("Position on screen")
+
+                Segmented {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 240
+                    options: [qsTr("Left"), qsTr("Bottom"), qsTr("Right"), qsTr("Top")]
+                    current: ["left", "bottom", "right", "top"].indexOf(display.value("position"))
+                    onPicked: index => pane.setMonitor(display.name, {
+                            position: ["left", "bottom", "right", "top"][index]
+                        })
+                }
+            }
+
+            SettingRow {
+                visible: display.shown && display.custom
+                title: qsTr("Automatically hide and show the Dock")
+
+                Toggle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: display.value("autoHide")
+                    onToggled: on => pane.setMonitor(display.name, {
+                            autoHide: on
+                        })
+                }
+            }
+        }
+    }
+
+    Repeater {
+        model: Ui.subpage === "dockDisplays" ? Quickshell.screens : []
+
+        DisplayDock {}
+    }
+
+    Caption {
+        visible: Ui.subpage === "dockDisplays"
+        text: qsTr("Displays connected later get the Dock with the settings on the previous page. Saved by display name, so a display keeps its settings when it's connected again.")
     }
 
     // ---- Hot Corners ----

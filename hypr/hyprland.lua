@@ -33,7 +33,7 @@ local right = "l"
 -- Your preferred terminal emulator
 local term = pick(S.terminal, "foot")
 -- Your preferred application launcher
-local menu = "fuzzel --icon-theme=" .. pick(S.icon_theme, "MacTahoe-dark")
+local menu = "fuzzel --icon-theme='" .. pick(S.icon_theme, "MacTahoe-dark"):gsub("'", "") .. "'"
 
 -- Color scheme
 local ac = "rgb(07a6c5)"
@@ -69,16 +69,41 @@ end
 ---- AUTOSTART ----
 -------------------
 
+-- The icon theme of the Quickshell shells (the Dock, the window switcher, notifications, desktop
+-- icons), from System Settings → Appearance. Only letters, digits and . _ + - are let through, since
+-- it becomes part of a command line.
+local icon_theme = pick(S.icon_theme, "MacTahoe-dark")
+if not icon_theme:match("^[%w._+-]+$") then
+    icon_theme = "MacTahoe-dark"
+end
+
+-- What the Quickshell shells start with:
+-- MALLOC_CONF=narenas:1: one memory pool instead of one per four CPU cores. Quickshell's allocator
+--   (jemalloc) otherwise spreads the shell's threads over dozens of pools that each keep spare memory;
+--   measured, that was more than half of the shell's memory.
+-- QSG_RENDER_LOOP=basic (System Settings → General → Performance, off by default): every window of
+--   the shell is drawn by one thread instead of one thread each. A little less memory, but a busy
+--   window can hold the others' animations up.
+local shell_env = "MALLOC_CONF=narenas:1 "
+local desktop_env = shell_env .. "QS_ICON_THEME=" .. icon_theme .. " "
+if pick(S.single_render_thread, false) then
+    desktop_env = desktop_env .. "QSG_RENDER_LOOP=basic "
+end
+
 hl.on("hyprland.start", function()
-    -- Wallpaper (~/.config/hypr/hyprpaper.conf, written by System Settings → Wallpaper)
-    hl.exec_cmd("hyprpaper")
+    -- Wallpaper: drawn by the desktop (in desktop-shell) with the icons, as System Settings →
+    -- Wallpaper chooses by default; else hyprpaper (~/.config/hypr/hyprpaper.conf, also written there)
+    if not pick(S.desktop_wallpaper, true) then
+        hl.exec_cmd("hyprpaper")
+    end
     hl.exec_cmd("waybar")
     hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    hl.exec_cmd("qs -p ~/.config/sway-dock")
-    -- Window switcher (Alt+Tab)
-    hl.exec_cmd("qs -p ~/.config/app-switcher")
-    -- Lock screen and notifications
-    hl.exec_cmd("qs -p ~/.config/lockscreen")
+    -- The Dock, the window switcher (Alt+Tab), the menu bar panels, the desktop, the notifications
+    -- and the password dialog (polkit agent): one Quickshell process
+    hl.exec_cmd(desktop_env .. "qs -p ~/.config/desktop-shell")
+    -- The lock screen, on its own and with nothing else in it: if it crashed while locked, the
+    -- session would be stuck behind Hyprland's red screen
+    hl.exec_cmd(shell_env .. "qs -p ~/.config/lockscreen")
     -- Load plugins enabled with hyprpm (hyprbars)
     hl.exec_cmd("hyprpm reload -n")
     -- Auto-lock, display sleep and lock before sleep (~/.config/hypr/hypridle.conf, System Settings → Lock Screen)
@@ -100,6 +125,8 @@ end)
 
 -- Qt apps follow the GTK theme and light/dark (System Settings → Appearance)
 hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
+-- For Quickshell apps started later (System Settings from the launcher)
+hl.env("QS_ICON_THEME", icon_theme)
 hl.env("XCURSOR_SIZE", tostring(pick(S.cursor_size, 24)))
 hl.env("HYPRCURSOR_SIZE", tostring(pick(S.cursor_size, 24)))
 if S.cursor_theme then
@@ -127,7 +154,8 @@ hl.config({
         resize_on_border = false,
         allow_tearing    = false,
 
-        layout = "dwindle",
+        -- "dwindle" or "master" (System Settings → Hyprland → Tiling)
+        layout = pick(S.layout, "dwindle"),
     },
 
     decoration = {
@@ -135,26 +163,31 @@ hl.config({
         rounding_power = 2,
 
         active_opacity   = 1.0,
-        inactive_opacity = 1.0,
+        inactive_opacity = pick(S.inactive_opacity, 1.0),
+
+        -- Darken windows that don't have focus (System Settings → Hyprland → Windows)
+        dim_inactive = pick(S.dim_inactive, false),
+        dim_strength = pick(S.dim_strength, 0.2),
 
         shadow = {
-            enabled      = true,
+            enabled      = pick(S.shadows, true),
             range        = 4,
             render_power = 3,
             color        = 0xee1a1a1a,
         },
 
         blur = {
-            enabled  = true,
-            -- Strong enough to read as frosted glass behind see-through surfaces (System Settings' sidebar)
-            size     = 8,
-            passes   = 3,
+            enabled  = pick(S.blur, true),
+            -- Strong enough to read as frosted glass behind see-through surfaces (System Settings' sidebar).
+            -- System Settings → Hyprland → Effects offers lighter and stronger.
+            size     = pick(S.blur_size, 8),
+            passes   = pick(S.blur_passes, 3),
             vibrancy = 0.1696,
         },
     },
 
     animations = {
-        enabled = true,
+        enabled = pick(S.animations, true),
     },
 })
 
@@ -235,11 +268,19 @@ hl.config({
         -- A display turned off when idle (hypridle) or by a hot corner wakes on input
         mouse_move_enables_dpms = true,
         key_press_enables_dpms   = true,
+        -- System Settings → Hyprland: windows asking for attention (e.g. a link opened in the browser)
+        -- come forward, middle-click pastes the selection, adaptive sync (0 off, 1 on, 2 fullscreen only)
+        focus_on_activate  = pick(S.focus_on_activate, false),
+        middle_click_paste = pick(S.middle_click_paste, true),
+        vrr                = pick(S.vrr, 0),
     },
 
-    -- Don't move the pointer when focus changes
     cursor = {
-        no_warps = true,
+        -- Don't move the pointer when focus changes (unless System Settings → Hyprland says to)
+        no_warps          = not pick(S.warp_pointer, false),
+        hide_on_key_press = pick(S.hide_on_key_press, false),
+        -- Seconds without moving before the pointer hides; 0 never
+        inactive_timeout  = pick(S.cursor_timeout, 0),
     },
 
     -- Focus left/right walks through the tabs of a group first
@@ -261,8 +302,10 @@ hl.config({
         repeat_rate  = pick(S.repeat_rate, 25),
         repeat_delay = pick(S.repeat_delay, 600),
 
-        -- Focus on click, not on hover
+        -- Focus on click, not on hover (System Settings → Hyprland → Focus: 0 click, 1 hover,
+        -- 2 hover for the pointer but keys go to the window clicked last)
         follow_mouse = pick(S.follow_mouse, 0),
+        numlock_by_default = pick(S.numlock, false),
 
         sensitivity    = pick(S.sensitivity, 0),
         natural_scroll = pick(S.mouse_natural_scroll, false),
@@ -293,13 +336,14 @@ hl.bind(mod .. " + SHIFT + e", hl.dsp.exec_cmd(
     [[[ "$(printf 'Cancel\nExit Hyprland\n' | fuzzel --dmenu --prompt 'End your Wayland session? ')" = "Exit Hyprland" ] && hyprctl dispatch 'hl.dsp.exit()']]
 ), { description = "Log out" })
 
--- Lock the screen (Ctrl+Cmd+Q on macOS)
-hl.bind(mod .. " + CTRL + q", hl.dsp.exec_cmd("qs -p ~/.config/lockscreen ipc call lock lock"), { description = "Lock the screen" })
+-- Lock the screen (Ctrl+Cmd+Q on macOS). Asks for the password right away: the grace period, during
+-- which any key unlocks, is only for the lock that comes by itself when idle.
+hl.bind(mod .. " + CTRL + q", hl.dsp.exec_cmd("qs -p ~/.config/lockscreen ipc call lock lockNow"), { description = "Lock the screen" })
 
 -- Notification Center
-hl.bind(mod .. " + n", hl.dsp.exec_cmd("qs -p ~/.config/lockscreen ipc call notifications toggle"), { description = "Show the Notification Center" })
+hl.bind(mod .. " + n", hl.dsp.exec_cmd("qs -p ~/.config/desktop-shell ipc call notifications toggle"), { description = "Show the Notification Center" })
 
--- Window switcher (Alt+Tab), drawn by ~/.config/app-switcher (Quickshell). Hold Alt and press Tab
+-- Window switcher (Alt+Tab), drawn by ~/.config/app-switcher (Quickshell, inside desktop-shell). Hold Alt and press Tab
 -- (Shift+Tab, the arrows or hjkl) to pick a window; let go of Alt to switch to it. While it's open,
 -- Esc cancels, Return switches and Q closes the selected window. Its keys live in the "App Switcher"
 -- submap (the name waybar shows), so the focused app never sees them, and reach the switcher as global
@@ -483,18 +527,19 @@ if pick(S.float_by_default, true) then
         name  = "float-by-default",
         match = { class = ".*" },
 
-        float  = true,
+        float = true,
+    })
+    hl.window_rule({
+        -- Untitled windows are menus and popups (Steam's top menu, for one): they stay where the app puts them
+        name  = "center-by-default",
+        match = { class = ".*", title = "negative:^$" },
+
         center = true,
     })
 end
 
-hl.window_rule({
-    -- Ignore maximize requests from apps
-    name  = "suppress-maximize-events",
-    match = { class = ".*" },
-
-    suppress_event = "maximize",
-})
+-- Maximize requests from apps are honored, so double-clicking the title bar of apps that draw
+-- their own (Chromium, Firefox, GNOME apps) fills the screen like hyprbars' double-click does.
 
 hl.window_rule({
     -- Fix some dragging issues with XWayland
@@ -642,12 +687,15 @@ do
 end
 
 
--- The menu bar is translucent, like macOS's: blur what's behind it
+-- The menu bar is translucent, like macOS's: blur what's behind it. Windows never go under it (it
+-- reserves its space), so it shows only the wallpaper, and xray lets Hyprland use its blurred copy of
+-- the wallpaper, made once, instead of blurring again every time something near the bar is redrawn.
 hl.layer_rule({
     name  = "waybar-blur",
     match = { namespace = "^waybar$" },
 
     blur = true,
+    xray = true,
 })
 
 -- So is the Dock (light frosted glass in Light mode). Its surface is larger than the bar it draws,

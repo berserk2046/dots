@@ -1,7 +1,7 @@
 import QtQuick
 import qs.shared
 
-// Wi-Fi: the waybar Wi-Fi panel (switch, joined network and its details, known and other networks).
+// Wi-Fi: the menu bar's Wi-Fi panel (switch, joined network and its details, known and other networks).
 Column {
     id: pane
 

@@ -32,6 +32,7 @@ Column {
         height: 34
 
         Text {
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.leftMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -53,6 +54,7 @@ Column {
     }
 
     Text {
+        textFormat: Text.PlainText
         x: 8
         height: 28
         visible: panel.adapter === null
@@ -114,6 +116,7 @@ Column {
                         running: panel.busy(deviceRow.modelData)
                     },
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         visible: deviceRow.modelData.connected && deviceRow.modelData.batteryAvailable
                         text: Math.round(deviceRow.modelData.battery * 100) + "%"
@@ -131,6 +134,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 8
             height: 26
             visible: panel.devices.length === 0
@@ -181,6 +185,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             x: 8
             height: 26
             visible: bt.nearby.length === 0

@@ -35,6 +35,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             text: parent.text
             color: Theme.textSecondary
             font.family: Theme.font
@@ -46,6 +47,7 @@ Column {
     }
 
     component Value: Text {
+        textFormat: Text.PlainText
         color: Theme.textSecondary
         font.family: Theme.font
         font.pixelSize: Theme.fontSize(12)
@@ -69,6 +71,7 @@ Column {
             spacing: 1
 
             Text {
+                textFormat: Text.PlainText
                 text: qsTr("System")
                 color: Theme.text
                 font.family: Theme.font
@@ -77,6 +80,7 @@ Column {
             }
 
             Text {
+                textFormat: Text.PlainText
                 width: parent.width
                 elide: Text.ElideRight
                 text: [panel.sys.cpuModel, panel.sys.uptime > 0 ? qsTr("up %1").arg(panel.sys.duration(panel.sys.uptime / 3600)) : ""]
@@ -176,6 +180,7 @@ Column {
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             visible: panel.sys.history.length < 2
             text: qsTr("Measuring…")
@@ -206,14 +211,6 @@ Column {
                 dot: Theme.track
                 text: qsTr("Idle %1").arg(panel.percent(Math.max(0, 1 - panel.sys.cpuTotal)))
             }
-        }
-
-        Value {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            visible: panel.sys.temperature > 0
-            text: Math.round(panel.sys.temperature) + " °C"
-            font.pixelSize: Theme.fontSize(11)
         }
     }
 
@@ -264,6 +261,17 @@ Column {
         DetailLine {
             label: qsTr("Load Average")
             value: panel.sys.load.map(l => l.toFixed(2)).join("   ")
+        }
+
+        // Hidden on a computer without that sensor
+        DetailLine {
+            label: qsTr("CPU Temperature")
+            value: panel.sys.temperature > 0 ? Math.round(panel.sys.temperature) + " °C" : ""
+        }
+
+        DetailLine {
+            label: qsTr("GPU Temperature")
+            value: panel.sys.gpuTemperature > 0 ? Math.round(panel.sys.gpuTemperature) + " °C" : ""
         }
     }
 
@@ -340,6 +348,7 @@ Column {
                 height: 18
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.left: parent.left
                     anchors.right: mountLabel.left
                     anchors.rightMargin: 8
@@ -353,6 +362,7 @@ Column {
                 }
 
                 Text {
+                    textFormat: Text.PlainText
                     id: mountLabel
 
                     anchors.right: parent.right
@@ -375,6 +385,7 @@ Column {
                 height: 16
 
                 Text {
+                    textFormat: Text.PlainText
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: qsTr("%1 available of %2").arg(panel.sys.bytes(disk.modelData.avail)).arg(panel.sys.bytes(disk.modelData.size))

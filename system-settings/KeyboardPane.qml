@@ -228,6 +228,7 @@ Column {
                         title: modelData.description || modelData.dispatcher
 
                         Text {
+                            textFormat: Text.PlainText
                             anchors.verticalCenter: parent.verticalCenter
                             text: pane.keyName(bindRow.modelData)
                             color: Theme.textSecondary

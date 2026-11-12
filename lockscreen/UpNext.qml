@@ -50,6 +50,7 @@ Rectangle {
         spacing: 2
 
         Text {
+            textFormat: Text.PlainText
             text: qsTr("UP NEXT")
             color: Theme.textSecondary
             font.family: Theme.font
@@ -59,6 +60,7 @@ Rectangle {
         }
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: card.event?.title ?? ""
             elide: Text.ElideRight
@@ -69,6 +71,7 @@ Rectangle {
         }
 
         Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: card.event ? card.when(card.event) + (card.event.location ? " · " + card.event.location : "") : ""
             elide: Text.ElideRight

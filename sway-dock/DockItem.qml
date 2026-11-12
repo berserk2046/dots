@@ -1,6 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
+import qs.common
+import Quickshell.Services.Mpris
 
 Item {
     id: item
@@ -30,6 +32,9 @@ Item {
     readonly property bool running: app.windows.length > 0
     readonly property bool focused: app.windows.some(w => w.activated)
     readonly property bool hovered: mouse.containsMouse
+    // Media player of this app (any MPRIS player: Spotify, mpv, browsers…); its card shows in the hover preview.
+    readonly property var player: Mpris.players.values.find(p => DesktopEntries.heuristicLookup(p.desktopEntry)?.id === pinId
+                                                                 || app.windows.some(w => w.appId.toLowerCase() === p.desktopEntry.toLowerCase())) ?? null
     readonly property string iconSource: Quickshell.iconPath(entry?.icon || app.id, "application-x-executable")
 
     signal menuRequested(bool alternate) // alternate: Alt held, offer Force Quit
@@ -105,16 +110,16 @@ Item {
         if (!running)
             launched();
         if (entry && entry.command && entry.command.length > 0)
-            Quickshell.execDetached(commandFor(entry.command, files || []));
+            Launch.app(commandFor(entry.command, files || []));
         else if (entry)
             entry.execute();
-        else
-            Quickshell.execDetached([app.id]);
+        // No desktop entry: nothing is started. A window's app id is a name the app made up, not a
+        // command to run.
     }
 
     function runAction(action) {
         if (action.command && action.command.length > 0)
-            Quickshell.execDetached(commandFor(action.command, []));
+            Launch.app(commandFor(action.command, []));
         else
             action.execute();
     }
@@ -190,12 +195,13 @@ Item {
             visible: item.running && item.badge?.countVisible === true && count > 0
 
             Text {
+                textFormat: Text.PlainText
                 id: countText
 
                 anchors.centerIn: parent
                 text: parent.count > 99 ? "99+" : parent.count
                 color: "#ffffff"
-                font.family: "SF Pro"
+                font.family: "SF Pro Text"
                 font.pixelSize: parent.height * 0.62
                 font.bold: true
             }
@@ -285,12 +291,13 @@ Item {
         visible: item.showLabel && (mouse.containsMouse || dropArea.containsDrag)
 
         Text {
+            textFormat: Text.PlainText
             id: label
 
             anchors.centerIn: parent
             text: item.entry?.name || item.app.id
             color: DockTheme.text
-            font.family: "SF Pro"
+            font.family: "SF Pro Text"
             font.pixelSize: 12
         }
     }
